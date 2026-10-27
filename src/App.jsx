@@ -168,7 +168,36 @@ function App() {
         </section>
       </main>
 
-      <footer className="border-t border-ink/10 bg-white"><div className="mx-auto grid max-w-7xl gap-10 px-5 py-14 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr] lg:px-8"><div><div className="flex items-center gap-2 text-lg font-extrabold"><span className="grid h-9 w-9 place-items-center rounded-xl bg-ink text-lime"><Home size={18}/></span>findmyneed</div><p className="mt-4 max-w-xs text-sm leading-6 text-ink/50">India’s neighbourhood marketplace for trusted services—at home, on the road and everywhere between.</p></div><FooterCol title="Discover" links={['Home services','Vehicle care','Repairs','Cleaning']}/><FooterCol title="For professionals" links={['Join as a pro','How it works','Partner support','Success guide']}/><FooterCol title="Company" links={['About','Safety','Help centre','Contact']}/></div><div className="border-t border-ink/10"><div className="mx-auto flex max-w-7xl flex-col gap-3 px-5 py-6 text-xs text-ink/45 sm:flex-row sm:justify-between lg:px-8"><span>© 2026 FindMyNeed. Built for every neighbourhood.</span><span>Privacy · Terms · Accessibility</span></div></div></footer>
+      <footer className="relative overflow-hidden bg-ink text-white">
+        <div className="absolute -right-32 top-16 h-80 w-80 rounded-full border-[60px] border-white/[.035]" />
+        <div className="mx-auto max-w-7xl px-5 pb-8 pt-16 lg:px-8 lg:pt-20">
+          <div className="relative grid gap-10 border-b border-white/10 pb-14 lg:grid-cols-[1.2fr_.8fr] lg:items-end">
+            <div>
+              <span className="inline-flex items-center gap-2 rounded-full bg-lime px-3 py-2 text-[11px] font-extrabold uppercase tracking-[.14em] text-ink"><Sparkles size={14}/> Help is closer than you think</span>
+              <h2 className="mt-6 max-w-2xl font-display text-5xl leading-[.98] tracking-tight sm:text-6xl">Ready to get that task <span className="italic text-lime">off your list?</span></h2>
+            </div>
+            <div className="lg:justify-self-end"><p className="max-w-sm text-sm leading-6 text-white/55">Join the early-access list and be the first to know when trusted professionals are available in your neighbourhood.</p><button onClick={()=>setInterestOpen(true)} className="mt-6 inline-flex items-center gap-3 rounded-full bg-coral px-6 py-3.5 text-sm font-extrabold transition hover:-translate-y-1 hover:bg-white hover:text-ink">I’m interested <ArrowRight size={17}/></button></div>
+          </div>
+
+          <div className="relative grid gap-12 py-14 sm:grid-cols-2 lg:grid-cols-[1.35fr_.8fr_.8fr_.8fr]">
+            <div>
+              <a href="#" className="flex items-center gap-2.5 text-xl font-extrabold tracking-[-.04em]"><span className="grid h-11 w-11 place-items-center rounded-xl bg-lime text-ink"><Home size={21}/></span>findmy<span className="-ml-2.5 text-lime">need</span></a>
+              <p className="mt-5 max-w-xs text-sm leading-6 text-white/50">India’s neighbourhood marketplace for dependable help—at home, on the road and everywhere between.</p>
+              <div className="mt-6 flex gap-2">{['in','ig','f'].map(s=><a key={s} href="#" aria-label={s} className="grid h-10 w-10 place-items-center rounded-full border border-white/15 text-xs font-extrabold uppercase transition hover:border-lime hover:bg-lime hover:text-ink">{s}</a>)}</div>
+            </div>
+            <FooterCol title="Discover" links={['Home services','Vehicle care','Repairs','Cleaning']}/>
+            <FooterCol title="For professionals" links={['Join as a pro','How it works','Partner support','Success guide']}/>
+            <FooterCol title="Company" links={['About us','Trust & safety','Help centre','Contact']}/>
+          </div>
+
+          <div className="relative flex flex-col gap-5 rounded-2xl border border-white/10 bg-white/[.04] p-5 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-white/10 text-lime"><MapPin size={18}/></span><div><p className="text-xs text-white/40">Growing across India</p><p className="text-sm font-bold">Bengaluru · Delhi · Mumbai · Hyderabad · Pune</p></div></div>
+            <a href="tel:+919876543210" className="flex items-center gap-3 text-sm font-bold transition hover:text-lime"><PhoneCall size={18}/> Need help? +91 98765 43210</a>
+          </div>
+
+          <div className="relative flex flex-col gap-3 pt-7 text-xs text-white/35 sm:flex-row sm:items-center sm:justify-between"><span>© 2026 FindMyNeed. Built for every neighbourhood.</span><div className="flex gap-5"><a href="#" className="hover:text-white">Privacy</a><a href="#" className="hover:text-white">Terms</a><a href="#" className="hover:text-white">Accessibility</a></div></div>
+        </div>
+      </footer>
 
       {interestOpen && <div className="fixed inset-0 z-[60] grid place-items-center bg-ink/60 p-4 backdrop-blur-sm" onMouseDown={e=>e.target===e.currentTarget&&setInterestOpen(false)}>
         <div className="w-full max-w-lg rounded-[2rem] bg-cream p-6 shadow-2xl sm:p-8">
@@ -186,6 +215,6 @@ function App() {
   )
 }
 
-function FooterCol({title, links}) { return <div><h3 className="text-sm font-extrabold">{title}</h3><div className="mt-4 flex flex-col gap-3 text-sm text-ink/50">{links.map(l=><a href="#" key={l} className="hover:text-leaf">{l}</a>)}</div></div> }
+function FooterCol({title, links}) { return <div><h3 className="text-xs font-extrabold uppercase tracking-[.16em] text-white/35">{title}</h3><div className="mt-5 flex flex-col gap-3 text-sm font-semibold text-white/70">{links.map(l=><a href="#" key={l} className="w-fit transition hover:translate-x-1 hover:text-lime">{l}</a>)}</div></div> }
 
 export default App
