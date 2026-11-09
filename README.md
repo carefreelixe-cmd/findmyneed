@@ -1,23 +1,28 @@
-# FindMyNeed
+# FindMyNeed marketplace
 
-A responsive frontend for an India-focused local-services marketplace. Customers can discover home, vehicle, and neighbourhood services, explore professional profiles, and register their interest before launch.
+Full-stack local-services marketplace built with React, Express, MongoDB, Redis/BullMQ and Razorpay.
 
-## Stack
+## Included
 
-- React
-- Vite
-- Tailwind CSS
-- Lucide icons
+- Customer/provider sign-up and login with JWT authentication
+- Searchable services, details, responsive booking and checkout flows
+- Razorpay order creation and server-side signature verification
+- Customer booking history and provider job dashboard
+- MongoDB persistence with an in-memory development fallback
+- BullMQ notification jobs when Redis is configured
+- Helmet, CORS, rate limiting, Zod validation, password hashing and role access
 
-## Local development
+## Run locally
 
-```bash
-npm install
-npm run dev
-```
+1. Copy `.env.example` to `.env` and add credentials when needed.
+2. Run `npm install`.
+3. Run `npm run dev:all`.
+4. Open `http://localhost:5173`.
 
-Create a production bundle with `npm run build`.
+MongoDB, Redis and Razorpay are optional for interface testing. Without MongoDB the API uses temporary memory. Without Redis jobs are logged. Without Razorpay keys checkout uses demo payment mode. Never use demo mode for a real deployment.
 
-## Current data behavior
+For production, set a strong `JWT_SECRET`, real database/Redis URLs, Razorpay live keys and the exact deployed `CLIENT_URL`. Use TLS, backups and monitoring, and connect the notification worker to email/SMS providers.
 
-The project is frontend-only. The early-access form stores submissions in the browser under the `findmyneed_leads` local-storage key. Replace this handler with an API call when the MERN backend is added.
+## Google sign-in
+
+Create a Google OAuth 2.0 **Web application** client and add `http://localhost:5173` as an authorized JavaScript origin. Put the same client ID in `GOOGLE_CLIENT_ID` and `VITE_GOOGLE_CLIENT_ID` inside `.env`, then restart both servers. The secret is not required for Google Identity Services ID-token login and must never be placed in a `VITE_` variable.
