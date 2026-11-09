@@ -1,34 +1,1274 @@
-import { useEffect, useState } from 'react'
-import { BrowserRouter, Link, Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { ArrowRight, CheckCircle2, Home, LayoutDashboard, LogOut, Menu, Search, ShieldCheck, Sparkles, Star, X } from 'lucide-react'
-import { AuthProvider, useAuth } from './context/AuthContext'
-import { api, money } from './lib/api'
+import { useEffect, useState } from "react";
+import {
+  BrowserRouter,
+  Link,
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+  useParams,
+} from "react-router-dom";
+import {
+  ArrowRight,
+  CheckCircle2,
+  Home,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  Search,
+  ShieldCheck,
+  Sparkles,
+  Star,
+  X,
+} from "lucide-react";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import AdminDashboard from "./components/AdminDashboard";
+import MarketplaceHome from "./components/MarketplaceHome";
+import { ProfessionalProfile, ProfessionalsSearch } from "./components/Professionals";
+import ServiceFinder from "./components/ServiceFinder";
+import { api, money } from "./lib/api";
+import { locations, serviceMenu } from "./data/marketplace";
 
-const fallbackServices=[{_id:'electrician',name:'Electrician',category:'Home repair',description:'Safe electrical repairs and installations',basePrice:299,icon:'⚡'},{_id:'plumber',name:'Plumber',category:'Home repair',description:'Leaks, fittings and plumbing emergencies',basePrice:349,icon:'🔧'},{_id:'cleaning',name:'Home cleaning',category:'Cleaning',description:'Thorough, reliable home cleaning',basePrice:499,icon:'✨'},{_id:'car',name:'Car repair',category:'Vehicle care',description:'Diagnostics, repairs and regular servicing',basePrice:699,icon:'🚗'},{_id:'appliance',name:'Appliance repair',category:'Home repair',description:'Expert care for everyday appliances',basePrice:449,icon:'🛠️'},{_id:'painter',name:'Painter',category:'Home improvement',description:'Clean finishes for homes and offices',basePrice:799,icon:'🎨'}]
-const repairTypes=[['Periodic service','Oil, filters and 40-point inspection','₹1,499'],['AC service & repair','Cooling check, gas refill and diagnosis','₹799'],['Brake repair','Pads, discs, fluid and safety inspection','₹999'],['Battery & electrical','Starting, charging and wiring faults','₹499'],['Tyres & alignment','Rotation, balancing and wheel alignment','₹699'],['Engine diagnostics','Computer scan and expert fault finding','₹899'],['Denting & painting','Panel repair and colour-matched finish','₹2,499'],['Pre-purchase inspection','Detailed used-car health report','₹1,199'],['Roadside assistance','Breakdown help where you are','₹599']]
-const brands={"Maruti Suzuki":['Swift','Baleno','Brezza','Dzire','Ertiga','Wagon R','Fronx'],Hyundai:['i10','i20','Creta','Venue','Verna','Alcazar'],Tata:['Nexon','Punch','Harrier','Safari','Altroz','Tiago'],Mahindra:['Scorpio-N','XUV700','Thar','XUV 3XO','Bolero'],Toyota:['Innova Crysta','Fortuner','Glanza','Urban Cruiser Hyryder','Camry'],Honda:['City','Amaze','Elevate','Jazz','WR-V'],Kia:['Seltos','Sonet','Carens','Carnival'],Skoda:['Kushaq','Slavia','Kodiaq','Superb'],Volkswagen:['Virtus','Taigun','Tiguan','Polo'],Renault:['Kwid','Triber','Kiger','Duster']}
-const mechanics=[{id:'autocare-pro',name:'AutoCare Pro Garage',area:'HSR Layout',rating:4.9,reviews:318,distance:'2.1 km',price:'₹1,399',tags:['Multi-brand','Pickup & drop'],initials:'AP'},{id:'motor-works',name:'City Motor Works',area:'Koramangala',rating:4.8,reviews:241,distance:'3.4 km',price:'₹1,249',tags:['Same-day','MOBIL certified'],initials:'CM'},{id:'pitstop-mobile',name:'PitStop Mobile Mechanics',area:'At your location',rating:4.9,reviews:189,distance:'Mobile service',price:'₹1,599',tags:['Doorstep','Emergency'],initials:'PM'}]
+const fallbackServices = [
+  {
+    _id: "electrician",
+    name: "Electrician",
+    category: "Home repair",
+    description: "Safe electrical repairs and installations",
+    basePrice: 299,
+    icon: "⚡",
+  },
+  {
+    _id: "plumber",
+    name: "Plumber",
+    category: "Home repair",
+    description: "Leaks, fittings and plumbing emergencies",
+    basePrice: 349,
+    icon: "🔧",
+  },
+  {
+    _id: "cleaning",
+    name: "Home cleaning",
+    category: "Cleaning",
+    description: "Thorough, reliable home cleaning",
+    basePrice: 499,
+    icon: "✨",
+  },
+  {
+    _id: "car",
+    name: "Car repair",
+    category: "Vehicle care",
+    description: "Diagnostics, repairs and regular servicing",
+    basePrice: 699,
+    icon: "🚗",
+  },
+  {
+    _id: "ac",
+    name: "AC service & repair",
+    category: "Appliance care",
+    description: "Cleaning, cooling diagnosis, gas refill and repair",
+    basePrice: 599,
+    icon: "❄️",
+  },
+  {
+    _id: "appliance",
+    name: "Appliance repair",
+    category: "Home repair",
+    description: "Expert care for everyday appliances",
+    basePrice: 449,
+    icon: "🛠️",
+  },
+  {
+    _id: "painter",
+    name: "Painter",
+    category: "Home improvement",
+    description: "Clean finishes for homes and offices",
+    basePrice: 799,
+    icon: "🎨",
+  },
+];
+const repairTypes = [
+  ["Periodic service", "Oil, filters and 40-point inspection", "₹1,499"],
+  ["AC service & repair", "Cooling check, gas refill and diagnosis", "₹799"],
+  ["Brake repair", "Pads, discs, fluid and safety inspection", "₹999"],
+  ["Battery & electrical", "Starting, charging and wiring faults", "₹499"],
+  ["Tyres & alignment", "Rotation, balancing and wheel alignment", "₹699"],
+  ["Engine diagnostics", "Computer scan and expert fault finding", "₹899"],
+  ["Denting & painting", "Panel repair and colour-matched finish", "₹2,499"],
+  ["Pre-purchase inspection", "Detailed used-car health report", "₹1,199"],
+  ["Roadside assistance", "Breakdown help where you are", "₹599"],
+];
+const brands = {
+  "Maruti Suzuki": ["Swift", "Baleno", "Brezza", "Dzire", "Ertiga", "Wagon R", "Fronx"],
+  Hyundai: ["i10", "i20", "Creta", "Venue", "Verna", "Alcazar"],
+  Tata: ["Nexon", "Punch", "Harrier", "Safari", "Altroz", "Tiago"],
+  Mahindra: ["Scorpio-N", "XUV700", "Thar", "XUV 3XO", "Bolero"],
+  Toyota: ["Innova Crysta", "Fortuner", "Glanza", "Urban Cruiser Hyryder", "Camry"],
+  Honda: ["City", "Amaze", "Elevate", "Jazz", "WR-V"],
+  Kia: ["Seltos", "Sonet", "Carens", "Carnival"],
+  Skoda: ["Kushaq", "Slavia", "Kodiaq", "Superb"],
+  Volkswagen: ["Virtus", "Taigun", "Tiguan", "Polo"],
+  Renault: ["Kwid", "Triber", "Kiger", "Duster"],
+};
+const mechanics = [
+  {
+    id: "autocare-pro",
+    name: "AutoCare Pro Garage",
+    area: "HSR Layout",
+    rating: 4.9,
+    reviews: 318,
+    distance: "2.1 km",
+    price: "₹1,399",
+    tags: ["Multi-brand", "Pickup & drop"],
+    initials: "AP",
+  },
+  {
+    id: "motor-works",
+    name: "City Motor Works",
+    area: "Koramangala",
+    rating: 4.8,
+    reviews: 241,
+    distance: "3.4 km",
+    price: "₹1,249",
+    tags: ["Same-day", "MOBIL certified"],
+    initials: "CM",
+  },
+  {
+    id: "pitstop-mobile",
+    name: "PitStop Mobile Mechanics",
+    area: "At your location",
+    rating: 4.9,
+    reviews: 189,
+    distance: "Mobile service",
+    price: "₹1,599",
+    tags: ["Doorstep", "Emergency"],
+    initials: "PM",
+  },
+];
 
-function Shell({children}){const[open,setOpen]=useState(false);const{user,logout}=useAuth();return <div className="min-h-screen bg-cream text-ink"><header className="sticky top-0 z-40 border-b border-ink/10 bg-cream/95 backdrop-blur"><div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 lg:px-8"><Link to="/" className="flex items-center gap-2 text-xl font-extrabold"><span className="grid h-10 w-10 place-items-center rounded-xl bg-ink text-lime"><Home size={20}/></span>findmy<span className="-ml-2 text-leaf">need</span></Link><nav className="hidden items-center gap-7 text-sm font-bold md:flex"><Link to="/services">Services</Link><Link to="/how-it-works">How it works</Link><Link to="/become-a-pro">Become a pro</Link>{user?<><Link to={user.role==='provider'?'/provider/dashboard':'/dashboard'} className="flex gap-2"><LayoutDashboard size={16}/>Dashboard</Link><button onClick={logout} className="flex gap-2"><LogOut size={16}/>Logout</button></>:<><Link to="/login">Log in</Link><Link to="/signup" className="rounded-full bg-ink px-5 py-3 text-white">Get started</Link></>}</nav><button className="md:hidden" onClick={()=>setOpen(!open)}>{open?<X/>:<Menu/>}</button></div>{open&&<nav className="flex flex-col gap-4 border-t border-ink/10 px-5 py-5 font-bold md:hidden"><Link onClick={()=>setOpen(false)} to="/services">Services</Link><Link to="/how-it-works">How it works</Link><Link to="/become-a-pro">Become a pro</Link><Link to={user?(user.role==='provider'?'/provider/dashboard':'/dashboard'):'/login'}>{user?'Dashboard':'Log in'}</Link></nav>}</header>{children}<footer className="mt-20 bg-ink py-12 text-white"><div className="mx-auto grid max-w-7xl gap-10 px-5 md:grid-cols-3 lg:px-8"><div><div className="text-xl font-extrabold">findmy<span className="text-lime">need</span></div><p className="mt-3 text-sm text-white/55">Dependable local help, booked with confidence.</p></div><div className="flex flex-col gap-2 text-sm text-white/65"><Link to="/services">Explore services</Link><Link to="/become-a-pro">Join as a professional</Link><Link to="/how-it-works">How it works</Link></div><div className="text-sm text-white/45 md:text-right">© 2026 FindMyNeed<br/>Bengaluru · Delhi · Mumbai · Hyderabad · Pune</div></div></footer></div>}
+function Shell({ children }) {
+  const [open, setOpen] = useState(false);
+  const { user, logout } = useAuth();
+  return (
+    <div className="min-h-screen bg-cream text-ink">
+      <header className="sticky top-0 z-40 border-b border-ink/10 bg-cream/95 backdrop-blur">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 lg:px-8">
+          <Link to="/" className="flex items-center gap-2 text-xl font-extrabold">
+            <span className="grid h-10 w-10 place-items-center rounded-xl bg-ink text-lime">
+              <Home size={20} />
+            </span>
+            findmy<span className="-ml-2 text-leaf">need</span>
+          </Link>
+          <nav className="hidden items-center gap-7 text-sm font-bold md:flex">
+            <div className="group relative py-3">
+              <Link to="/services">Services ⌄</Link>
+              <div className="invisible absolute left-1/2 top-full z-50 w-[620px] -translate-x-1/2 rounded-3xl border border-ink/10 bg-white p-6 opacity-0 shadow-2xl transition group-hover:visible group-hover:opacity-100">
+                <div className="grid grid-cols-3 gap-3">
+                  {serviceMenu.map((item) => (
+                    <Link
+                      key={item.id}
+                      to={`/find/${item.id}`}
+                      className="rounded-2xl p-4 text-left hover:bg-cream"
+                    >
+                      <b>{item.label}</b>
+                      <p className="mt-2 text-xs font-medium leading-5 text-ink/45">
+                        {item.items.join(" · ")}
+                      </p>
+                    </Link>
+                  ))}
+                </div>
+                <Link
+                  to="/services"
+                  className="mt-4 block rounded-xl bg-ink p-3 text-center text-white"
+                >
+                  View all services
+                </Link>
+              </div>
+            </div>
+            <div className="group relative py-3">
+              <Link to="/professionals">Professionals ⌄</Link>
+              <div className="invisible absolute left-0 top-full z-50 w-56 rounded-2xl border border-ink/10 bg-white p-3 opacity-0 shadow-xl transition group-hover:visible group-hover:opacity-100">
+                {locations.map((location) => (
+                  <Link
+                    key={location}
+                    to={`/professionals?location=${encodeURIComponent(location)}`}
+                    className="block rounded-xl px-4 py-3 hover:bg-cream"
+                  >
+                    {location}
+                  </Link>
+                ))}
+              </div>
+            </div>
+            <Link to="/how-it-works">How it works</Link>
+            <Link to="/become-a-pro">Become a pro</Link>
+            {user ? (
+              <>
+                <Link
+                  to={
+                    user.role === "admin"
+                      ? "/admin/dashboard"
+                      : user.role === "provider"
+                        ? "/provider/dashboard"
+                        : "/dashboard"
+                  }
+                  className="flex gap-2"
+                >
+                  <LayoutDashboard size={16} />
+                  Dashboard
+                </Link>
+                <button onClick={logout} className="flex gap-2">
+                  <LogOut size={16} />
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <Link to="/login">Log in</Link>
+                <Link to="/signup" className="rounded-full bg-ink px-5 py-3 text-white">
+                  Get started
+                </Link>
+              </>
+            )}
+          </nav>
+          <button className="md:hidden" onClick={() => setOpen(!open)}>
+            {open ? <X /> : <Menu />}
+          </button>
+        </div>
+        {open && (
+          <nav className="flex flex-col gap-4 border-t border-ink/10 px-5 py-5 font-bold md:hidden">
+            <Link onClick={() => setOpen(false)} to="/services">
+              All services
+            </Link>
+            {serviceMenu.map((item) => (
+              <Link key={item.id} onClick={() => setOpen(false)} to={`/find/${item.id}`}>
+                {item.label}
+              </Link>
+            ))}
+            <Link onClick={() => setOpen(false)} to="/professionals">
+              Find professionals
+            </Link>
+            <Link onClick={() => setOpen(false)} to="/how-it-works">
+              How it works
+            </Link>
+            <Link onClick={() => setOpen(false)} to="/become-a-pro">
+              Become a pro
+            </Link>
+            <Link
+              to={
+                user
+                  ? user.role === "admin"
+                    ? "/admin/dashboard"
+                    : user.role === "provider"
+                      ? "/provider/dashboard"
+                      : "/dashboard"
+                  : "/login"
+              }
+            >
+              {user ? "Dashboard" : "Log in"}
+            </Link>
+          </nav>
+        )}
+      </header>
+      {children}
+      <footer className="mt-20 bg-ink py-12 text-white">
+        <div className="mx-auto grid max-w-7xl gap-10 px-5 sm:grid-cols-2 lg:grid-cols-4 lg:px-8">
+          <div>
+            <div className="text-xl font-extrabold">
+              findmy<span className="text-lime">need</span>
+            </div>
+            <p className="mt-3 text-sm text-white/55">
+              Dependable local help, booked with confidence.
+            </p>
+          </div>
+          <div className="flex flex-col gap-2 text-sm text-white/65">
+            <b className="mb-2 text-white">For customers</b>
+            <Link to="/services">Explore services</Link>
+            <Link to="/find/car">Car care</Link>
+            <Link to="/find/ac">AC service & repair</Link>
+            <Link to="/find/appliance">Appliance repair</Link>
+            <Link to="/how-it-works">How it works</Link>
+          </div>
+          <div className="flex flex-col gap-2 text-sm text-white/65">
+            <b className="mb-2 text-white">For professionals</b>
+            <Link to="/signup">Create provider account</Link>
+            <Link to="/become-a-pro">Why join FindMyNeed</Link>
+            <Link to="/login">Provider login</Link>
+            <Link to="/professionals">Browse professionals</Link>
+          </div>
+          <div className="text-sm text-white/45 lg:text-right">
+            © 2026 FindMyNeed
+            <br />
+            Bengaluru · Delhi · Mumbai · Hyderabad · Pune
+            <div className="mt-4 flex gap-3 lg:justify-end">
+              <Link to="/how-it-works">Help</Link>
+              <Link to="/how-it-works">Privacy</Link>
+              <Link to="/how-it-works">Terms</Link>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}
 
-function HomePage(){const nav=useNavigate();const[q,setQ]=useState('');return <main><section className="mx-auto grid max-w-7xl gap-12 px-5 py-16 lg:grid-cols-2 lg:px-8 lg:py-24"><div className="self-center"><span className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-extrabold uppercase tracking-widest shadow"><Sparkles size={14} className="text-coral"/>Trusted help near you</span><h1 className="mt-7 font-display text-6xl leading-[.95] sm:text-7xl">Whatever needs fixing, <em className="text-leaf">find the right hands.</em></h1><p className="mt-7 max-w-xl text-lg leading-8 text-ink/60">Compare verified local professionals, see clear pricing and book safely in minutes.</p><form onSubmit={e=>{e.preventDefault();nav('/services?q='+encodeURIComponent(q))}} className="mt-9 flex rounded-2xl bg-white p-2 shadow-soft"><Search className="ml-3 self-center text-leaf"/><input value={q} onChange={e=>setQ(e.target.value)} className="min-w-0 flex-1 bg-transparent px-3 outline-none" placeholder="What service do you need?"/><button className="rounded-xl bg-coral px-6 py-4 font-extrabold text-white">Find experts</button></form><div className="mt-6 flex gap-6 text-sm font-bold text-ink/45"><span>✓ Verified</span><span>★ Reviewed</span><span>✓ Protected</span></div></div><div className="relative min-h-[500px] overflow-hidden rounded-[3rem] bg-leaf"><img src="/images/trusted-professional.png" className="h-full w-full object-cover"/><div className="absolute bottom-6 left-6 rounded-2xl bg-white p-5 shadow-soft"><b>12,000+ professionals</b><p className="mt-1 text-sm text-ink/50">Ready across major cities</p></div></div></section><section className="bg-white py-20"><div className="mx-auto max-w-7xl px-5 lg:px-8"><div className="flex items-end justify-between"><div><p className="text-xs font-black uppercase tracking-widest text-leaf">Popular today</p><h2 className="mt-3 font-display text-5xl">Help for every need</h2></div><Link to="/services" className="font-bold text-leaf">View all →</Link></div><ServiceGrid services={fallbackServices}/></div></section><section className="mx-auto max-w-7xl px-5 py-24 lg:px-8"><h2 className="text-center font-display text-5xl">Booked in three simple steps</h2><div className="mt-12 grid gap-5 md:grid-cols-3">{[['01','Tell us what you need'],['02','Choose a trusted pro'],['03','Book and pay safely']].map(([n,t])=><div className="rounded-3xl border border-ink/10 bg-white p-8" key={n}><b className="text-coral">{n}</b><h3 className="mt-8 text-xl font-extrabold">{t}</h3><p className="mt-3 text-sm leading-6 text-ink/55">Clear choices, useful details and updates at every step.</p></div>)}</div></section></main>}
-function ServiceGrid({services}){return <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{services.map(s=><Link to={s._id==='car'?'/vehicle-services':`/services/${s._id}`} key={s._id} className="group rounded-3xl border border-ink/10 bg-cream p-6 transition hover:-translate-y-1 hover:shadow-soft"><span className="text-4xl">{s.icon||'🔧'}</span><p className="mt-5 text-xs font-bold uppercase tracking-wider text-leaf">{s.category}</p><h3 className="mt-2 text-xl font-extrabold">{s.name}</h3><p className="mt-2 text-sm text-ink/55">{s.description}</p><div className="mt-6 flex justify-between text-sm font-bold"><span>From {money(s.basePrice)}</span><ArrowRight size={18}/></div></Link>)}</div>}
-function Services(){const loc=useLocation();const[services,setServices]=useState(fallbackServices);const[q,setQ]=useState(new URLSearchParams(loc.search).get('q')||'');useEffect(()=>{api.get('/services').then(r=>r.data.services.length&&setServices(r.data.services)).catch(()=>{})},[]);const shown=services.filter(s=>(s.name+s.category).toLowerCase().includes(q.toLowerCase()));return <main className="mx-auto max-w-7xl px-5 py-14 lg:px-8"><p className="text-xs font-black uppercase tracking-widest text-coral">Explore</p><h1 className="mt-3 font-display text-6xl">Services near you</h1><div className="mt-8 flex max-w-xl gap-3 rounded-2xl bg-white p-4 shadow"><Search/><input className="w-full outline-none" placeholder="Search services" value={q} onChange={e=>setQ(e.target.value)}/></div>{shown.length?<ServiceGrid services={shown}/>:<Empty text="No services match your search."/>}</main>}
-function ServiceDetail(){const{id}=useParams();const nav=useNavigate();const[service,setService]=useState(fallbackServices.find(x=>x._id===id)||fallbackServices[0]);useEffect(()=>{api.get('/services/'+id).then(r=>setService(r.data.service)).catch(()=>{})},[id]);return <main className="mx-auto max-w-5xl px-5 py-16"><Link to="/services" className="text-sm font-bold text-leaf">← All services</Link><div className="mt-7 grid gap-8 rounded-[2.5rem] bg-white p-8 shadow-soft md:grid-cols-[1fr_.65fr] md:p-12"><div><span className="text-6xl">{service.icon||'🔧'}</span><p className="mt-8 text-xs font-black uppercase tracking-widest text-coral">{service.category}</p><h1 className="mt-3 font-display text-6xl">{service.name}</h1><p className="mt-5 max-w-xl leading-7 text-ink/60">{service.description}. Every professional is identity checked, reviewed and backed by our service guarantee.</p></div><div className="rounded-3xl bg-ink p-7 text-white"><p className="text-sm text-white/55">Service starts at</p><p className="mt-2 text-4xl font-black">{money(service.basePrice)}</p><button onClick={()=>nav('/book/'+service._id,{state:{service}})} className="mt-8 w-full rounded-xl bg-lime p-4 font-extrabold text-ink">Book this service</button><p className="mt-4 text-center text-xs text-white/45">No hidden platform fees</p></div></div></main>}
+function HomePage() {
+  const nav = useNavigate();
+  const [q, setQ] = useState("");
+  return (
+    <main>
+      <section className="mx-auto grid max-w-7xl gap-12 px-5 py-16 lg:grid-cols-2 lg:px-8 lg:py-24">
+        <div className="self-center">
+          <span className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-extrabold uppercase tracking-widest shadow">
+            <Sparkles size={14} className="text-coral" />
+            Trusted help near you
+          </span>
+          <h1 className="mt-7 font-display text-6xl leading-[.95] sm:text-7xl">
+            Whatever needs fixing, <em className="text-leaf">find the right hands.</em>
+          </h1>
+          <p className="mt-7 max-w-xl text-lg leading-8 text-ink/60">
+            Compare verified local professionals, see clear pricing and book safely in minutes.
+          </p>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              nav("/services?q=" + encodeURIComponent(q));
+            }}
+            className="mt-9 flex rounded-2xl bg-white p-2 shadow-soft"
+          >
+            <Search className="ml-3 self-center text-leaf" />
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              className="min-w-0 flex-1 bg-transparent px-3 outline-none"
+              placeholder="What service do you need?"
+            />
+            <button className="rounded-xl bg-coral px-6 py-4 font-extrabold text-white">
+              Find experts
+            </button>
+          </form>
+          <div className="mt-6 flex gap-6 text-sm font-bold text-ink/45">
+            <span>✓ Verified</span>
+            <span>★ Reviewed</span>
+            <span>✓ Protected</span>
+          </div>
+        </div>
+        <div className="relative min-h-[500px] overflow-hidden rounded-[3rem] bg-leaf">
+          <img src="/images/trusted-professional.png" className="h-full w-full object-cover" />
+          <div className="absolute bottom-6 left-6 rounded-2xl bg-white p-5 shadow-soft">
+            <b>12,000+ professionals</b>
+            <p className="mt-1 text-sm text-ink/50">Ready across major cities</p>
+          </div>
+        </div>
+      </section>
+      <section className="bg-white py-20">
+        <div className="mx-auto max-w-7xl px-5 lg:px-8">
+          <div className="flex items-end justify-between">
+            <div>
+              <p className="text-xs font-black uppercase tracking-widest text-leaf">
+                Popular today
+              </p>
+              <h2 className="mt-3 font-display text-5xl">Help for every need</h2>
+            </div>
+            <Link to="/services" className="font-bold text-leaf">
+              View all →
+            </Link>
+          </div>
+          <ServiceGrid services={fallbackServices} />
+        </div>
+      </section>
+      <section className="mx-auto max-w-7xl px-5 py-24 lg:px-8">
+        <h2 className="text-center font-display text-5xl">Booked in three simple steps</h2>
+        <div className="mt-12 grid gap-5 md:grid-cols-3">
+          {[
+            ["01", "Tell us what you need"],
+            ["02", "Choose a trusted pro"],
+            ["03", "Book and pay safely"],
+          ].map(([n, t]) => (
+            <div className="rounded-3xl border border-ink/10 bg-white p-8" key={n}>
+              <b className="text-coral">{n}</b>
+              <h3 className="mt-8 text-xl font-extrabold">{t}</h3>
+              <p className="mt-3 text-sm leading-6 text-ink/55">
+                Clear choices, useful details and updates at every step.
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
+    </main>
+  );
+}
+function ServiceGrid({ services }) {
+  return (
+    <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {services.map((s) => (
+        <Link
+          to={`/find/${s._id}`}
+          state={{ service: s }}
+          key={s._id}
+          className="group rounded-3xl border border-ink/10 bg-cream p-6 transition hover:-translate-y-1 hover:shadow-soft"
+        >
+          <span className="text-4xl">{s.icon || "🔧"}</span>
+          <p className="mt-5 text-xs font-bold uppercase tracking-wider text-leaf">{s.category}</p>
+          <h3 className="mt-2 text-xl font-extrabold">{s.name}</h3>
+          <p className="mt-2 text-sm text-ink/55">{s.description}</p>
+          <div className="mt-6 flex justify-between text-sm font-bold">
+            <span>From {money(s.basePrice)}</span>
+            <ArrowRight size={18} />
+          </div>
+        </Link>
+      ))}
+    </div>
+  );
+}
+function Services() {
+  const loc = useLocation();
+  const [services, setServices] = useState(fallbackServices);
+  const [q, setQ] = useState(new URLSearchParams(loc.search).get("q") || "");
+  useEffect(() => {
+    api
+      .get("/services")
+      .then((r) => r.data.services.length && setServices(r.data.services))
+      .catch(() => {});
+  }, []);
+  const shown = services.filter((s) =>
+    (s.name + s.category).toLowerCase().includes(q.toLowerCase()),
+  );
+  return (
+    <main className="mx-auto max-w-7xl px-5 py-14 lg:px-8">
+      <p className="text-xs font-black uppercase tracking-widest text-coral">Explore</p>
+      <h1 className="mt-3 font-display text-6xl">Services near you</h1>
+      <div className="mt-8 flex max-w-xl gap-3 rounded-2xl bg-white p-4 shadow">
+        <Search />
+        <input
+          className="w-full outline-none"
+          placeholder="Search services"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+        />
+      </div>
+      {shown.length ? (
+        <ServiceGrid services={shown} />
+      ) : (
+        <Empty text="No services match your search." />
+      )}
+    </main>
+  );
+}
+function ServiceDetail() {
+  const { id } = useParams();
+  const nav = useNavigate();
+  const [service, setService] = useState(
+    fallbackServices.find((x) => x._id === id) || fallbackServices[0],
+  );
+  useEffect(() => {
+    api
+      .get("/services/" + id)
+      .then((r) => setService(r.data.service))
+      .catch(() => {});
+  }, [id]);
+  return (
+    <main className="mx-auto max-w-5xl px-5 py-16">
+      <Link to="/services" className="text-sm font-bold text-leaf">
+        ← All services
+      </Link>
+      <div className="mt-7 grid gap-8 rounded-[2.5rem] bg-white p-8 shadow-soft md:grid-cols-[1fr_.65fr] md:p-12">
+        <div>
+          <span className="text-6xl">{service.icon || "🔧"}</span>
+          <p className="mt-8 text-xs font-black uppercase tracking-widest text-coral">
+            {service.category}
+          </p>
+          <h1 className="mt-3 font-display text-6xl">{service.name}</h1>
+          <p className="mt-5 max-w-xl leading-7 text-ink/60">
+            {service.description}. Every professional is identity checked, reviewed and backed by
+            our service guarantee.
+          </p>
+        </div>
+        <div className="rounded-3xl bg-ink p-7 text-white">
+          <p className="text-sm text-white/55">Service starts at</p>
+          <p className="mt-2 text-4xl font-black">{money(service.basePrice)}</p>
+          <button
+            onClick={() => nav("/book/" + service._id, { state: { service } })}
+            className="mt-8 w-full rounded-xl bg-lime p-4 font-extrabold text-ink"
+          >
+            Book this service
+          </button>
+          <p className="mt-4 text-center text-xs text-white/45">No hidden platform fees</p>
+        </div>
+      </div>
+    </main>
+  );
+}
 
-function VehicleHub(){const nav=useNavigate();const[make,setMake]=useState('');const[model,setModel]=useState('');const[repair,setRepair]=useState('');const models=brands[make]||[];function find(e){e.preventDefault();nav(`/mechanics?make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}&repair=${encodeURIComponent(repair)}`)}return <main><section className="bg-ink text-white"><div className="mx-auto grid max-w-7xl gap-12 px-5 py-16 lg:grid-cols-[1.05fr_.95fr] lg:px-8 lg:py-24"><div><span className="rounded-full bg-lime px-4 py-2 text-xs font-black uppercase tracking-widest text-ink">Car care, made clear</span><h1 className="mt-8 font-display text-6xl leading-[.95] sm:text-7xl">Car servicing and repairs, <em className="text-lime">made easy.</em></h1><p className="mt-6 max-w-xl text-lg leading-8 text-white/60">Tell us your car and what it needs. Compare trusted workshops and doorstep mechanics by price, rating and availability.</p><div className="mt-8 flex flex-wrap gap-5 text-sm font-bold text-white/70"><span>✓ Verified garages</span><span>✓ Upfront estimates</span><span>✓ Service warranty</span></div></div><form onSubmit={find} className="rounded-[2rem] bg-white p-7 text-ink shadow-2xl"><p className="text-xs font-black uppercase tracking-widest text-coral">Find the right mechanic</p><h2 className="mt-2 text-2xl font-extrabold">What car do you drive?</h2><div className="mt-6 space-y-4"><label className="block text-sm font-bold">Make<select required value={make} onChange={e=>{setMake(e.target.value);setModel('')}} className="mt-2 w-full rounded-xl border border-ink/15 p-4"><option value="">Select car make</option>{Object.keys(brands).map(x=><option key={x}>{x}</option>)}</select></label><label className="block text-sm font-bold">Model<select required disabled={!make} value={model} onChange={e=>setModel(e.target.value)} className="mt-2 w-full rounded-xl border border-ink/15 p-4 disabled:opacity-50"><option value="">Select model</option>{models.map(x=><option key={x}>{x}</option>)}</select></label><label className="block text-sm font-bold">What does it need?<select required value={repair} onChange={e=>setRepair(e.target.value)} className="mt-2 w-full rounded-xl border border-ink/15 p-4"><option value="">Choose a service or repair</option>{repairTypes.map(x=><option key={x[0]}>{x[0]}</option>)}</select></label></div><button className="mt-6 w-full rounded-xl bg-coral p-4 font-extrabold text-white">Compare mechanics</button></form></div></section><section className="mx-auto max-w-7xl px-5 py-20 lg:px-8"><p className="text-xs font-black uppercase tracking-widest text-leaf">All vehicle services</p><h2 className="mt-3 font-display text-5xl">Whatever your car needs</h2><div className="mt-10 grid gap-4 md:grid-cols-3">{repairTypes.map(([name,desc,price])=><button onClick={()=>{setRepair(name);scrollTo({top:0,behavior:'smooth'})}} key={name} className="rounded-2xl border border-ink/10 bg-white p-6 text-left transition hover:-translate-y-1 hover:shadow-soft"><span className="text-2xl">🔧</span><h3 className="mt-4 text-lg font-extrabold">{name}</h3><p className="mt-2 text-sm text-ink/50">{desc}</p><p className="mt-5 text-sm font-black text-leaf">From {price}</p></button>)}</div></section><section className="bg-white py-20"><div className="mx-auto max-w-7xl px-5 lg:px-8"><div className="flex items-end justify-between"><div><p className="text-xs font-black uppercase tracking-widest text-coral">Trusted nearby</p><h2 className="mt-3 font-display text-5xl">Top-rated mechanics</h2></div><Link to="/mechanics" className="font-bold text-leaf">See all →</Link></div><MechanicCards items={mechanics}/></div></section></main>}
-function MechanicCards({items}){return <div className="mt-10 grid gap-5 md:grid-cols-3">{items.map(m=><Link to={`/mechanics/${m.id}`} key={m.id} className="rounded-3xl border border-ink/10 bg-cream p-6"><div className="flex items-start justify-between"><span className="grid h-16 w-16 place-items-center rounded-2xl bg-lime text-xl font-black">{m.initials}</span><span className="rounded-full bg-white px-3 py-2 text-xs font-bold">★ {m.rating} ({m.reviews})</span></div><h3 className="mt-6 text-xl font-extrabold">{m.name}</h3><p className="mt-2 text-sm text-ink/50">📍 {m.area} · {m.distance}</p><div className="mt-4 flex flex-wrap gap-2">{m.tags.map(t=><span key={t} className="rounded-full bg-white px-3 py-1 text-xs font-bold">{t}</span>)}</div><div className="mt-6 flex justify-between border-t border-ink/10 pt-5"><b>From {m.price}</b><span className="font-bold text-leaf">View garage →</span></div></Link>)}</div>}
-function Mechanics(){const p=new URLSearchParams(useLocation().search),make=p.get('make'),model=p.get('model'),repair=p.get('repair');return <main className="mx-auto max-w-7xl px-5 py-14 lg:px-8"><Link to="/vehicle-services" className="text-sm font-bold text-leaf">← Change car or service</Link><h1 className="mt-5 font-display text-6xl">Mechanics you can trust</h1><p className="mt-4 text-ink/55">{make?`${repair} for your ${make} ${model}`:'Compare verified workshops and mobile mechanics near you.'}</p><div className="mt-7 flex flex-wrap gap-3">{['Recommended','Lowest price','Top rated','Nearest','Doorstep service'].map(x=><button key={x} className="rounded-full border border-ink/15 bg-white px-4 py-2 text-sm font-bold">{x}</button>)}</div><MechanicCards items={mechanics}/></main>}
-function MechanicDetail(){const{id}=useParams(),m=mechanics.find(x=>x.id===id)||mechanics[0];return <main className="mx-auto max-w-5xl px-5 py-14"><Link to="/mechanics" className="text-sm font-bold text-leaf">← All mechanics</Link><div className="mt-7 grid gap-8 rounded-[2.5rem] bg-white p-8 md:grid-cols-[1fr_.6fr]"><div><div className="flex items-center gap-5"><span className="grid h-20 w-20 place-items-center rounded-2xl bg-lime text-2xl font-black">{m.initials}</span><div><h1 className="text-3xl font-extrabold">{m.name}</h1><p className="mt-2 text-sm text-ink/50">★ {m.rating} from {m.reviews} verified reviews · {m.area}</p></div></div><h2 className="mt-9 text-xl font-extrabold">Why drivers choose this workshop</h2><div className="mt-4 grid gap-3 sm:grid-cols-2">{['Verified technicians','Genuine-quality parts','Digital job updates','30-day service warranty','Pickup and drop','Transparent estimate'].map(x=><span className="rounded-xl bg-cream p-4 text-sm font-bold" key={x}>✓ {x}</span>)}</div><h2 className="mt-8 text-xl font-extrabold">Specialities</h2><p className="mt-3 leading-7 text-ink/55">Periodic servicing, brake repair, suspension, AC, battery, diagnostics and multi-brand mechanical work.</p></div><div className="rounded-3xl bg-ink p-7 text-white"><p className="text-sm text-white/50">Service from</p><p className="mt-2 text-4xl font-black">{m.price}</p><p className="mt-5 text-sm leading-6 text-white/55">Select your vehicle and service to see an exact estimate and available slots.</p><Link to="/vehicle-services" className="mt-7 block rounded-xl bg-lime p-4 text-center font-extrabold text-ink">Get an estimate</Link></div></div></main>}
-function GoogleButton({onError}){const configured=Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID);useEffect(()=>{if(!configured)return;let tries=0,t=setInterval(()=>{if(window.google?.accounts?.id){clearInterval(t);window.google.accounts.id.initialize({client_id:import.meta.env.VITE_GOOGLE_CLIENT_ID,callback:async({credential})=>{try{const{data}=await api.post('/auth/google',{credential});localStorage.setItem('findmyneed_token',data.token);localStorage.setItem('findmyneed_user',JSON.stringify(data.user));location.href='/dashboard'}catch(e){onError(e.response?.data?.message||'Google sign-in failed.')}}});window.google.accounts.id.renderButton(document.getElementById('google-signin'),{theme:'outline',size:'large',width:360,text:'continue_with'})}if(++tries>20){clearInterval(t);onError('Google Sign-In could not load. Check your connection and OAuth settings.')}},250);return()=>clearInterval(t)},[configured]);return <><div className="my-5 flex items-center gap-3 text-xs text-ink/35"><span className="h-px flex-1 bg-ink/10"/>OR<span className="h-px flex-1 bg-ink/10"/></div>{configured?<div id="google-signin" className="flex min-h-11 justify-center"/>:<button type="button" onClick={()=>onError('Add GOOGLE_CLIENT_ID and VITE_GOOGLE_CLIENT_ID to .env, then restart the app.')} className="flex w-full items-center justify-center gap-3 rounded-xl border border-ink/15 bg-white p-3.5 font-bold text-ink/65 hover:bg-cream"><span className="text-lg font-black text-[#4285f4]">G</span>Continue with Google <span className="text-xs font-medium text-ink/35">(setup needed)</span></button>}</>}
-function AuthPage({register=false}){const{login,register:signUp}=useAuth();const nav=useNavigate();const[form,setForm]=useState({name:'',email:'',phone:'',password:'',role:'customer'});const[error,setError]=useState('');async function submit(e){e.preventDefault();setError('');try{const u=await(register?signUp(form):login(form));nav(u.role==='provider'?'/provider/dashboard':'/dashboard')}catch(e){setError(e.response?.data?.message||'Could not connect. Start the API server and try again.')}}return <main className="grid min-h-[70vh] place-items-center px-5 py-14"><form onSubmit={submit} className="w-full max-w-md rounded-[2rem] bg-white p-8 shadow-soft"><h1 className="font-display text-5xl">{register?'Create account':'Welcome back'}</h1><p className="mt-3 text-sm text-ink/55">{register?'Book trusted help or grow your service business.':'Log in to manage bookings and payments.'}</p>{error&&<p className="mt-5 rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">{error}</p>}<div className="mt-7 space-y-4">{register&&<Field label="Full name" value={form.name} set={v=>setForm({...form,name:v})}/>}<Field label="Email" type="email" value={form.email} set={v=>setForm({...form,email:v})}/>{register&&<Field label="Phone" value={form.phone} set={v=>setForm({...form,phone:v})}/>}<Field label="Password" type="password" value={form.password} set={v=>setForm({...form,password:v})}/>{register&&<label className="block text-sm font-bold">I want to<select value={form.role} onChange={e=>setForm({...form,role:e.target.value})} className="mt-2 w-full rounded-xl border border-ink/15 bg-white p-3"><option value="customer">Book services</option><option value="provider">Offer my services</option></select></label>}</div><button className="mt-7 w-full rounded-xl bg-ink p-4 font-extrabold text-white">{register?'Create my account':'Log in'}</button><GoogleButton onError={setError}/><p className="mt-5 text-center text-sm">{register?'Already registered? ':'New here? '}<Link className="font-bold text-leaf" to={register?'/login':'/signup'}>{register?'Log in':'Create account'}</Link></p></form></main>}
-function Field({label,type='text',value,set}){return <label className="block text-sm font-bold">{label}<input required type={type} value={value} onChange={e=>set(e.target.value)} className="mt-2 w-full rounded-xl border border-ink/15 p-3 outline-none focus:border-leaf"/></label>}
-function Protected({role,children}){const{user,loading}=useAuth();if(loading)return <Empty text="Loading…"/>;if(!user)return <Navigate to="/login"/>;if(role&&user.role!==role)return <Navigate to="/dashboard"/>;return children}
-function Booking(){const{id}=useParams();const nav=useNavigate();const service=fallbackServices.find(x=>x._id===id)||fallbackServices[0];const[form,setForm]=useState({date:'',time:'10:00',address:'',notes:''});const[error,setError]=useState('');async function submit(e){e.preventDefault();try{const{data}=await api.post('/bookings',{serviceId:id,serviceName:service.name,amount:service.basePrice,...form});nav('/checkout/'+data.booking._id,{state:{booking:data.booking}})}catch(e){setError(e.response?.data?.message||'Could not create booking.')}}return <Protected role="customer"><main className="mx-auto max-w-3xl px-5 py-14"><h1 className="font-display text-6xl">Book {service.name}</h1><p className="mt-3 text-ink/55">Choose a convenient time and tell the professional where to arrive.</p><form onSubmit={submit} className="mt-9 rounded-3xl bg-white p-8 shadow-soft">{error&&<p className="mb-5 bg-red-50 p-3 text-red-700">{error}</p>}<div className="grid gap-5 sm:grid-cols-2"><Field label="Date" type="date" value={form.date} set={v=>setForm({...form,date:v})}/><Field label="Time" type="time" value={form.time} set={v=>setForm({...form,time:v})}/></div><div className="mt-5"><Field label="Service address" value={form.address} set={v=>setForm({...form,address:v})}/></div><label className="mt-5 block text-sm font-bold">Notes (optional)<textarea value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})} className="mt-2 min-h-28 w-full rounded-xl border border-ink/15 p-3"/></label><div className="mt-7 flex items-center justify-between border-t border-ink/10 pt-6"><div><p className="text-xs text-ink/45">Payable now</p><b className="text-2xl">{money(service.basePrice)}</b></div><button className="rounded-xl bg-coral px-7 py-4 font-extrabold text-white">Continue to payment</button></div></form></main></Protected>}
-function Checkout(){const{id}=useParams();const nav=useNavigate();const loc=useLocation();const booking=loc.state?.booking;const[busy,setBusy]=useState(false);async function pay(){setBusy(true);try{const{data}=await api.post('/payments/order',{bookingId:id});if(data.demo){await api.post('/payments/verify',{bookingId:id,demo:true});return nav('/booking-success/'+id)}new window.Razorpay({key:data.keyId,amount:data.order.amount,currency:'INR',name:'FindMyNeed',description:'Service booking',order_id:data.order.id,handler:async response=>{await api.post('/payments/verify',{bookingId:id,...response});nav('/booking-success/'+id)},theme:{color:'#2f6f4e'}}).open()}catch(e){alert(e.response?.data?.message||'Payment could not start.')}finally{setBusy(false)}}return <Protected role="customer"><main className="grid min-h-[65vh] place-items-center px-5"><div className="w-full max-w-lg rounded-3xl bg-white p-8 shadow-soft"><ShieldCheck size={46} className="text-leaf"/><h1 className="mt-5 font-display text-5xl">Secure checkout</h1><div className="mt-7 space-y-3 rounded-2xl bg-cream p-5 text-sm"><div className="flex justify-between"><span>Booking</span><b>#{id.slice(-6)}</b></div><div className="flex justify-between"><span>Service</span><b>{booking?.serviceName||'Local service'}</b></div><div className="flex justify-between border-t border-ink/10 pt-3 text-lg"><span>Total</span><b>{money(booking?.amount||0)}</b></div></div><button disabled={busy} onClick={pay} className="mt-6 w-full rounded-xl bg-ink p-4 font-extrabold text-white">{busy?'Starting payment…':'Pay securely with Razorpay'}</button><p className="mt-4 text-center text-xs text-ink/40">UPI · Cards · Netbanking · Wallets</p></div></main></Protected>}
-function Dashboard({provider=false}){const{user}=useAuth();const[bookings,setBookings]=useState([]);useEffect(()=>{api.get('/bookings').then(r=>setBookings(r.data.bookings)).catch(()=>{})},[]);async function update(id,status){await api.patch(`/bookings/${id}/status`,{status});setBookings(x=>x.map(b=>b._id===id?{...b,status}:b))}return <Protected role={provider?'provider':'customer'}><main className="mx-auto max-w-7xl px-5 py-14 lg:px-8"><p className="text-sm font-bold text-leaf">Hello, {user?.name}</p><h1 className="mt-2 font-display text-6xl">{provider?'Provider dashboard':'Your bookings'}</h1><div className="mt-10 grid gap-4 md:grid-cols-3">{(provider?[['New requests',bookings.filter(b=>b.status==='pending').length],['Active jobs',bookings.filter(b=>['confirmed','in_progress'].includes(b.status)).length],['Completed',bookings.filter(b=>b.status==='completed').length]]:[['Upcoming',bookings.filter(b=>!['completed','cancelled'].includes(b.status)).length],['Completed',bookings.filter(b=>b.status==='completed').length],['Total bookings',bookings.length]]).map(([t,n])=><div className="rounded-2xl bg-white p-6" key={t}><p className="text-sm text-ink/50">{t}</p><b className="mt-2 block text-4xl">{n}</b></div>)}</div><div className="mt-8 space-y-4">{bookings.length?bookings.map(b=><article key={b._id} className="flex flex-col justify-between gap-5 rounded-2xl bg-white p-6 md:flex-row md:items-center"><div><p className="text-xs font-black uppercase tracking-wider text-coral">{b.status.replace('_',' ')}</p><h3 className="mt-2 text-xl font-extrabold">{b.serviceName}</h3><p className="mt-2 text-sm text-ink/50">{b.date} at {b.time} · {b.address}</p></div><div className="flex items-center gap-3"><b>{money(b.amount)}</b>{provider&&b.status==='pending'&&<button onClick={()=>update(b._id,'confirmed')} className="rounded-lg bg-leaf px-4 py-2 text-sm font-bold text-white">Accept</button>}{provider&&b.status==='confirmed'&&<button onClick={()=>update(b._id,'completed')} className="rounded-lg bg-ink px-4 py-2 text-sm font-bold text-white">Complete</button>}</div></article>):<Empty text={provider?'New customer requests will appear here.':'You have no bookings yet.'}/>}</div></main></Protected>}
-function Empty({text}){return <div className="my-10 rounded-3xl border border-dashed border-ink/20 p-12 text-center text-ink/50">{text}</div>}
-function StaticPage({pro=false}){return <main className="mx-auto max-w-5xl px-5 py-20 text-center"><span className="text-5xl">{pro?'🧰':'✨'}</span><h1 className="mt-6 font-display text-6xl">{pro?'Grow your business with FindMyNeed':'Simple, safe and local'}</h1><p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-ink/60">{pro?'Build a trusted profile, receive nearby job requests, manage your schedule and get paid securely.':'Search, compare trusted professionals, choose a slot, pay securely and track the job from your dashboard.'}</p><Link to={pro?'/signup':'/services'} className="mt-9 inline-flex rounded-full bg-ink px-7 py-4 font-extrabold text-white">{pro?'Join as a professional':'Explore services'}</Link></main>}
-function Success(){return <Protected><main className="grid min-h-[65vh] place-items-center px-5 text-center"><div><CheckCircle2 className="mx-auto text-leaf" size={72}/><h1 className="mt-5 font-display text-6xl">Booking confirmed!</h1><p className="mt-4 text-ink/55">Your professional will receive the request and you’ll see updates in your dashboard.</p><Link to="/dashboard" className="mt-8 inline-block rounded-full bg-ink px-7 py-4 font-bold text-white">View my bookings</Link></div></main></Protected>}
-function App(){return <BrowserRouter><AuthProvider><Shell><Routes><Route path="/" element={<HomePage/>}/><Route path="/services" element={<Services/>}/><Route path="/services/:id" element={<ServiceDetail/>}/><Route path="/vehicle-services" element={<VehicleHub/>}/><Route path="/mechanics" element={<Mechanics/>}/><Route path="/mechanics/:id" element={<MechanicDetail/>}/><Route path="/login" element={<AuthPage/>}/><Route path="/signup" element={<AuthPage register/>}/><Route path="/book/:id" element={<Booking/>}/><Route path="/checkout/:id" element={<Checkout/>}/><Route path="/booking-success/:id" element={<Success/>}/><Route path="/dashboard" element={<Dashboard/>}/><Route path="/provider/dashboard" element={<Dashboard provider/>}/><Route path="/become-a-pro" element={<StaticPage pro/>}/><Route path="/how-it-works" element={<StaticPage/>}/><Route path="*" element={<Navigate to="/"/>}/></Routes></Shell></AuthProvider></BrowserRouter>}
-export default App
+function VehicleHub() {
+  const nav = useNavigate();
+  const [make, setMake] = useState("");
+  const [model, setModel] = useState("");
+  const [repair, setRepair] = useState("");
+  const models = brands[make] || [];
+  function find(e) {
+    e.preventDefault();
+    nav(
+      `/mechanics?make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}&repair=${encodeURIComponent(repair)}`,
+    );
+  }
+  return (
+    <main>
+      <section className="bg-ink text-white">
+        <div className="mx-auto grid max-w-7xl gap-12 px-5 py-16 lg:grid-cols-[1.05fr_.95fr] lg:px-8 lg:py-24">
+          <div>
+            <span className="rounded-full bg-lime px-4 py-2 text-xs font-black uppercase tracking-widest text-ink">
+              Car care, made clear
+            </span>
+            <h1 className="mt-8 font-display text-6xl leading-[.95] sm:text-7xl">
+              Car servicing and repairs, <em className="text-lime">made easy.</em>
+            </h1>
+            <p className="mt-6 max-w-xl text-lg leading-8 text-white/60">
+              Tell us your car and what it needs. Compare trusted workshops and doorstep mechanics
+              by price, rating and availability.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-5 text-sm font-bold text-white/70">
+              <span>✓ Verified garages</span>
+              <span>✓ Upfront estimates</span>
+              <span>✓ Service warranty</span>
+            </div>
+          </div>
+          <form onSubmit={find} className="rounded-[2rem] bg-white p-7 text-ink shadow-2xl">
+            <p className="text-xs font-black uppercase tracking-widest text-coral">
+              Find the right mechanic
+            </p>
+            <h2 className="mt-2 text-2xl font-extrabold">What car do you drive?</h2>
+            <div className="mt-6 space-y-4">
+              <label className="block text-sm font-bold">
+                Make
+                <select
+                  required
+                  value={make}
+                  onChange={(e) => {
+                    setMake(e.target.value);
+                    setModel("");
+                  }}
+                  className="mt-2 w-full rounded-xl border border-ink/15 p-4"
+                >
+                  <option value="">Select car make</option>
+                  {Object.keys(brands).map((x) => (
+                    <option key={x}>{x}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="block text-sm font-bold">
+                Model
+                <select
+                  required
+                  disabled={!make}
+                  value={model}
+                  onChange={(e) => setModel(e.target.value)}
+                  className="mt-2 w-full rounded-xl border border-ink/15 p-4 disabled:opacity-50"
+                >
+                  <option value="">Select model</option>
+                  {models.map((x) => (
+                    <option key={x}>{x}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="block text-sm font-bold">
+                What does it need?
+                <select
+                  required
+                  value={repair}
+                  onChange={(e) => setRepair(e.target.value)}
+                  className="mt-2 w-full rounded-xl border border-ink/15 p-4"
+                >
+                  <option value="">Choose a service or repair</option>
+                  {repairTypes.map((x) => (
+                    <option key={x[0]}>{x[0]}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <button className="mt-6 w-full rounded-xl bg-coral p-4 font-extrabold text-white">
+              Compare mechanics
+            </button>
+          </form>
+        </div>
+      </section>
+      <section className="mx-auto max-w-7xl px-5 py-20 lg:px-8">
+        <p className="text-xs font-black uppercase tracking-widest text-leaf">
+          All vehicle services
+        </p>
+        <h2 className="mt-3 font-display text-5xl">Whatever your car needs</h2>
+        <div className="mt-10 grid gap-4 md:grid-cols-3">
+          {repairTypes.map(([name, desc, price]) => (
+            <button
+              onClick={() => {
+                setRepair(name);
+                scrollTo({ top: 0, behavior: "smooth" });
+              }}
+              key={name}
+              className="rounded-2xl border border-ink/10 bg-white p-6 text-left transition hover:-translate-y-1 hover:shadow-soft"
+            >
+              <span className="text-2xl">🔧</span>
+              <h3 className="mt-4 text-lg font-extrabold">{name}</h3>
+              <p className="mt-2 text-sm text-ink/50">{desc}</p>
+              <p className="mt-5 text-sm font-black text-leaf">From {price}</p>
+            </button>
+          ))}
+        </div>
+      </section>
+      <section className="bg-white py-20">
+        <div className="mx-auto max-w-7xl px-5 lg:px-8">
+          <div className="flex items-end justify-between">
+            <div>
+              <p className="text-xs font-black uppercase tracking-widest text-coral">
+                Trusted nearby
+              </p>
+              <h2 className="mt-3 font-display text-5xl">Top-rated mechanics</h2>
+            </div>
+            <Link to="/mechanics" className="font-bold text-leaf">
+              See all →
+            </Link>
+          </div>
+          <MechanicCards items={mechanics} />
+        </div>
+      </section>
+    </main>
+  );
+}
+function MechanicCards({ items }) {
+  return (
+    <div className="mt-10 grid gap-5 md:grid-cols-3">
+      {items.map((m) => (
+        <Link
+          to={`/mechanics/${m.id}`}
+          key={m.id}
+          className="rounded-3xl border border-ink/10 bg-cream p-6"
+        >
+          <div className="flex items-start justify-between">
+            <span className="grid h-16 w-16 place-items-center rounded-2xl bg-lime text-xl font-black">
+              {m.initials}
+            </span>
+            <span className="rounded-full bg-white px-3 py-2 text-xs font-bold">
+              ★ {m.rating} ({m.reviews})
+            </span>
+          </div>
+          <h3 className="mt-6 text-xl font-extrabold">{m.name}</h3>
+          <p className="mt-2 text-sm text-ink/50">
+            📍 {m.area} · {m.distance}
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {m.tags.map((t) => (
+              <span key={t} className="rounded-full bg-white px-3 py-1 text-xs font-bold">
+                {t}
+              </span>
+            ))}
+          </div>
+          <div className="mt-6 flex justify-between border-t border-ink/10 pt-5">
+            <b>From {m.price}</b>
+            <span className="font-bold text-leaf">View garage →</span>
+          </div>
+        </Link>
+      ))}
+    </div>
+  );
+}
+function Mechanics() {
+  const p = new URLSearchParams(useLocation().search),
+    make = p.get("make"),
+    model = p.get("model"),
+    repair = p.get("repair");
+  return (
+    <main className="mx-auto max-w-7xl px-5 py-14 lg:px-8">
+      <Link to="/vehicle-services" className="text-sm font-bold text-leaf">
+        ← Change car or service
+      </Link>
+      <h1 className="mt-5 font-display text-6xl">Mechanics you can trust</h1>
+      <p className="mt-4 text-ink/55">
+        {make
+          ? `${repair} for your ${make} ${model}`
+          : "Compare verified workshops and mobile mechanics near you."}
+      </p>
+      <div className="mt-7 flex flex-wrap gap-3">
+        {["Recommended", "Lowest price", "Top rated", "Nearest", "Doorstep service"].map((x) => (
+          <button
+            key={x}
+            className="rounded-full border border-ink/15 bg-white px-4 py-2 text-sm font-bold"
+          >
+            {x}
+          </button>
+        ))}
+      </div>
+      <MechanicCards items={mechanics} />
+    </main>
+  );
+}
+function MechanicDetail() {
+  const { id } = useParams(),
+    m = mechanics.find((x) => x.id === id) || mechanics[0];
+  return (
+    <main className="mx-auto max-w-5xl px-5 py-14">
+      <Link to="/mechanics" className="text-sm font-bold text-leaf">
+        ← All mechanics
+      </Link>
+      <div className="mt-7 grid gap-8 rounded-[2.5rem] bg-white p-8 md:grid-cols-[1fr_.6fr]">
+        <div>
+          <div className="flex items-center gap-5">
+            <span className="grid h-20 w-20 place-items-center rounded-2xl bg-lime text-2xl font-black">
+              {m.initials}
+            </span>
+            <div>
+              <h1 className="text-3xl font-extrabold">{m.name}</h1>
+              <p className="mt-2 text-sm text-ink/50">
+                ★ {m.rating} from {m.reviews} verified reviews · {m.area}
+              </p>
+            </div>
+          </div>
+          <h2 className="mt-9 text-xl font-extrabold">Why drivers choose this workshop</h2>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {[
+              "Verified technicians",
+              "Genuine-quality parts",
+              "Digital job updates",
+              "30-day service warranty",
+              "Pickup and drop",
+              "Transparent estimate",
+            ].map((x) => (
+              <span className="rounded-xl bg-cream p-4 text-sm font-bold" key={x}>
+                ✓ {x}
+              </span>
+            ))}
+          </div>
+          <h2 className="mt-8 text-xl font-extrabold">Specialities</h2>
+          <p className="mt-3 leading-7 text-ink/55">
+            Periodic servicing, brake repair, suspension, AC, battery, diagnostics and multi-brand
+            mechanical work.
+          </p>
+        </div>
+        <div className="rounded-3xl bg-ink p-7 text-white">
+          <p className="text-sm text-white/50">Service from</p>
+          <p className="mt-2 text-4xl font-black">{m.price}</p>
+          <p className="mt-5 text-sm leading-6 text-white/55">
+            Select your vehicle and service to see an exact estimate and available slots.
+          </p>
+          <Link
+            to="/vehicle-services"
+            className="mt-7 block rounded-xl bg-lime p-4 text-center font-extrabold text-ink"
+          >
+            Get an estimate
+          </Link>
+        </div>
+      </div>
+    </main>
+  );
+}
+function GoogleButton({ onError }) {
+  const configured = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID);
+  useEffect(() => {
+    if (!configured) return;
+    let tries = 0,
+      t = setInterval(() => {
+        if (window.google?.accounts?.id) {
+          clearInterval(t);
+          window.google.accounts.id.initialize({
+            client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+            callback: async ({ credential }) => {
+              try {
+                const { data } = await api.post("/auth/google", { credential });
+                localStorage.setItem("findmyneed_token", data.token);
+                localStorage.setItem("findmyneed_user", JSON.stringify(data.user));
+                location.href = "/dashboard";
+              } catch (e) {
+                onError(e.response?.data?.message || "Google sign-in failed.");
+              }
+            },
+          });
+          window.google.accounts.id.renderButton(document.getElementById("google-signin"), {
+            theme: "outline",
+            size: "large",
+            width: 360,
+            text: "continue_with",
+          });
+        }
+        if (++tries > 20) {
+          clearInterval(t);
+          onError("Google Sign-In could not load. Check your connection and OAuth settings.");
+        }
+      }, 250);
+    return () => clearInterval(t);
+  }, [configured]);
+  return (
+    <>
+      <div className="my-5 flex items-center gap-3 text-xs text-ink/35">
+        <span className="h-px flex-1 bg-ink/10" />
+        OR
+        <span className="h-px flex-1 bg-ink/10" />
+      </div>
+      {configured ? (
+        <div id="google-signin" className="flex min-h-11 justify-center" />
+      ) : (
+        <button
+          type="button"
+          onClick={() =>
+            onError("Add GOOGLE_CLIENT_ID and VITE_GOOGLE_CLIENT_ID to .env, then restart the app.")
+          }
+          className="flex w-full items-center justify-center gap-3 rounded-xl border border-ink/15 bg-white p-3.5 font-bold text-ink/65 hover:bg-cream"
+        >
+          <span className="text-lg font-black text-[#4285f4]">G</span>Continue with Google{" "}
+          <span className="text-xs font-medium text-ink/35">(setup needed)</span>
+        </button>
+      )}
+    </>
+  );
+}
+function AuthPage({ register = false }) {
+  const { login, register: signUp } = useAuth();
+  const nav = useNavigate();
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    password: "",
+    role: "customer",
+  });
+  const [error, setError] = useState("");
+  async function submit(e) {
+    e.preventDefault();
+    setError("");
+    try {
+      const u = await (register ? signUp(form) : login(form));
+      nav(
+        u.role === "admin"
+          ? "/admin/dashboard"
+          : u.role === "provider"
+            ? "/provider/dashboard"
+            : "/dashboard",
+      );
+    } catch (e) {
+      setError(
+        e.response?.data?.message || "Could not connect. Start the API server and try again.",
+      );
+    }
+  }
+  return (
+    <main className="grid min-h-[70vh] place-items-center px-5 py-14">
+      <form onSubmit={submit} className="w-full max-w-md rounded-[2rem] bg-white p-8 shadow-soft">
+        <h1 className="font-display text-5xl">{register ? "Create account" : "Welcome back"}</h1>
+        <p className="mt-3 text-sm text-ink/55">
+          {register
+            ? "Book trusted help or grow your service business."
+            : "Log in to manage bookings and payments."}
+        </p>
+        {error && (
+          <p className="mt-5 rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">{error}</p>
+        )}
+        <div className="mt-7 space-y-4">
+          {register && (
+            <Field label="Full name" value={form.name} set={(v) => setForm({ ...form, name: v })} />
+          )}
+          <Field
+            label="Email"
+            type="email"
+            value={form.email}
+            set={(v) => setForm({ ...form, email: v })}
+          />
+          {register && (
+            <Field label="Phone" value={form.phone} set={(v) => setForm({ ...form, phone: v })} />
+          )}
+          <Field
+            label="Password"
+            type="password"
+            value={form.password}
+            set={(v) => setForm({ ...form, password: v })}
+          />
+          {register && (
+            <label className="block text-sm font-bold">
+              I want to
+              <select
+                value={form.role}
+                onChange={(e) => setForm({ ...form, role: e.target.value })}
+                className="mt-2 w-full rounded-xl border border-ink/15 bg-white p-3"
+              >
+                <option value="customer">Book services</option>
+                <option value="provider">Offer my services</option>
+              </select>
+            </label>
+          )}
+        </div>
+        <button className="mt-7 w-full rounded-xl bg-ink p-4 font-extrabold text-white">
+          {register ? "Create my account" : "Log in"}
+        </button>
+        <GoogleButton onError={setError} />
+        <p className="mt-5 text-center text-sm">
+          {register ? "Already registered? " : "New here? "}
+          <Link className="font-bold text-leaf" to={register ? "/login" : "/signup"}>
+            {register ? "Log in" : "Create account"}
+          </Link>
+        </p>
+      </form>
+    </main>
+  );
+}
+function Field({ label, type = "text", value, set }) {
+  return (
+    <label className="block text-sm font-bold">
+      {label}
+      <input
+        required
+        type={type}
+        value={value}
+        onChange={(e) => set(e.target.value)}
+        className="mt-2 w-full rounded-xl border border-ink/15 p-3 outline-none focus:border-leaf"
+      />
+    </label>
+  );
+}
+function Protected({ role, children }) {
+  const { user, loading } = useAuth();
+  if (loading) return <Empty text="Loading…" />;
+  if (!user) return <Navigate to="/login" />;
+  if (role && user.role !== role) return <Navigate to="/dashboard" />;
+  return children;
+}
+function Booking() {
+  const { id } = useParams();
+  const nav = useNavigate();
+  const loc = useLocation();
+  const service =
+    loc.state?.service || fallbackServices.find((x) => x._id === id) || fallbackServices[0];
+  const serviceRequest = loc.state?.serviceRequest;
+  const [form, setForm] = useState({ date: "", time: "10:00", address: "", notes: "" });
+  const [error, setError] = useState("");
+  async function submit(e) {
+    e.preventDefault();
+    try {
+      const { data } = await api.post("/bookings", {
+        serviceId: id,
+        serviceName: service.name,
+        amount: service.basePrice,
+        ...form,
+        notes: [
+          serviceRequest
+            ? Object.entries(serviceRequest)
+                .filter(([, value]) => value)
+                .map(([key, value]) => `${key}: ${value}`)
+                .join(" | ")
+            : "",
+          form.notes,
+        ]
+          .filter(Boolean)
+          .join("\n"),
+      });
+      nav("/checkout/" + data.booking._id, { state: { booking: data.booking } });
+    } catch (e) {
+      setError(e.response?.data?.message || "Could not create booking.");
+    }
+  }
+  return (
+    <Protected role="customer">
+      <main className="mx-auto max-w-3xl px-5 py-14">
+        <h1 className="font-display text-6xl">Book {service.name}</h1>
+        <p className="mt-3 text-ink/55">
+          Choose a convenient time and tell the professional where to arrive.
+        </p>
+        <form onSubmit={submit} className="mt-9 rounded-3xl bg-white p-8 shadow-soft">
+          {error && <p className="mb-5 bg-red-50 p-3 text-red-700">{error}</p>}
+          {serviceRequest && (
+            <div className="mb-7 rounded-2xl bg-cream p-5">
+              <p className="text-xs font-black uppercase tracking-widest text-leaf">
+                Your service details
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {Object.entries(serviceRequest)
+                  .filter(([, value]) => value)
+                  .map(([key, value]) => (
+                    <span key={key} className="rounded-full bg-white px-3 py-2 text-xs font-bold">
+                      {key.replace(/([A-Z])/g, " $1")}: {value}
+                    </span>
+                  ))}
+              </div>
+            </div>
+          )}
+          <div className="grid gap-5 sm:grid-cols-2">
+            <Field
+              label="Date"
+              type="date"
+              value={form.date}
+              set={(v) => setForm({ ...form, date: v })}
+            />
+            <Field
+              label="Time"
+              type="time"
+              value={form.time}
+              set={(v) => setForm({ ...form, time: v })}
+            />
+          </div>
+          <div className="mt-5">
+            <Field
+              label="Service address"
+              value={form.address}
+              set={(v) => setForm({ ...form, address: v })}
+            />
+          </div>
+          <label className="mt-5 block text-sm font-bold">
+            Notes (optional)
+            <textarea
+              value={form.notes}
+              onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              className="mt-2 min-h-28 w-full rounded-xl border border-ink/15 p-3"
+            />
+          </label>
+          <div className="mt-7 flex items-center justify-between border-t border-ink/10 pt-6">
+            <div>
+              <p className="text-xs text-ink/45">Payable now</p>
+              <b className="text-2xl">{money(service.basePrice)}</b>
+            </div>
+            <button className="rounded-xl bg-coral px-7 py-4 font-extrabold text-white">
+              Continue to payment
+            </button>
+          </div>
+        </form>
+      </main>
+    </Protected>
+  );
+}
+function Checkout() {
+  const { id } = useParams();
+  const nav = useNavigate();
+  const loc = useLocation();
+  const booking = loc.state?.booking;
+  const [busy, setBusy] = useState(false);
+  async function pay() {
+    setBusy(true);
+    try {
+      const { data } = await api.post("/payments/order", { bookingId: id });
+      if (data.demo) {
+        await api.post("/payments/verify", { bookingId: id, demo: true });
+        return nav("/booking-success/" + id);
+      }
+      new window.Razorpay({
+        key: data.keyId,
+        amount: data.order.amount,
+        currency: "INR",
+        name: "FindMyNeed",
+        description: "Service booking",
+        order_id: data.order.id,
+        handler: async (response) => {
+          await api.post("/payments/verify", { bookingId: id, ...response });
+          nav("/booking-success/" + id);
+        },
+        theme: { color: "#2f6f4e" },
+      }).open();
+    } catch (e) {
+      alert(e.response?.data?.message || "Payment could not start.");
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <Protected role="customer">
+      <main className="grid min-h-[65vh] place-items-center px-5">
+        <div className="w-full max-w-lg rounded-3xl bg-white p-8 shadow-soft">
+          <ShieldCheck size={46} className="text-leaf" />
+          <h1 className="mt-5 font-display text-5xl">Secure checkout</h1>
+          <div className="mt-7 space-y-3 rounded-2xl bg-cream p-5 text-sm">
+            <div className="flex justify-between">
+              <span>Booking</span>
+              <b>#{id.slice(-6)}</b>
+            </div>
+            <div className="flex justify-between">
+              <span>Service</span>
+              <b>{booking?.serviceName || "Local service"}</b>
+            </div>
+            <div className="flex justify-between border-t border-ink/10 pt-3 text-lg">
+              <span>Total</span>
+              <b>{money(booking?.amount || 0)}</b>
+            </div>
+          </div>
+          <button
+            disabled={busy}
+            onClick={pay}
+            className="mt-6 w-full rounded-xl bg-ink p-4 font-extrabold text-white"
+          >
+            {busy ? "Starting payment…" : "Pay securely with Razorpay"}
+          </button>
+          <p className="mt-4 text-center text-xs text-ink/40">UPI · Cards · Netbanking · Wallets</p>
+        </div>
+      </main>
+    </Protected>
+  );
+}
+function Dashboard({ provider = false }) {
+  const { user } = useAuth();
+  const [bookings, setBookings] = useState([]);
+  useEffect(() => {
+    api
+      .get("/bookings")
+      .then((r) => setBookings(r.data.bookings))
+      .catch(() => {});
+  }, []);
+  async function update(id, status) {
+    await api.patch(`/bookings/${id}/status`, { status });
+    setBookings((x) => x.map((b) => (b._id === id ? { ...b, status } : b)));
+  }
+  return (
+    <Protected role={provider ? "provider" : "customer"}>
+      <main className="mx-auto max-w-7xl px-5 py-14 lg:px-8">
+        <p className="text-sm font-bold text-leaf">Hello, {user?.name}</p>
+        <h1 className="mt-2 font-display text-6xl">
+          {provider ? "Provider dashboard" : "Your bookings"}
+        </h1>
+        <div className="mt-10 grid gap-4 md:grid-cols-3">
+          {(provider
+            ? [
+                ["New requests", bookings.filter((b) => b.status === "pending").length],
+                [
+                  "Active jobs",
+                  bookings.filter((b) => ["confirmed", "in_progress"].includes(b.status)).length,
+                ],
+                ["Completed", bookings.filter((b) => b.status === "completed").length],
+              ]
+            : [
+                [
+                  "Upcoming",
+                  bookings.filter((b) => !["completed", "cancelled"].includes(b.status)).length,
+                ],
+                ["Completed", bookings.filter((b) => b.status === "completed").length],
+                ["Total bookings", bookings.length],
+              ]
+          ).map(([t, n]) => (
+            <div className="rounded-2xl bg-white p-6" key={t}>
+              <p className="text-sm text-ink/50">{t}</p>
+              <b className="mt-2 block text-4xl">{n}</b>
+            </div>
+          ))}
+        </div>
+        <div className="mt-8 space-y-4">
+          {bookings.length ? (
+            bookings.map((b) => (
+              <article
+                key={b._id}
+                className="flex flex-col justify-between gap-5 rounded-2xl bg-white p-6 md:flex-row md:items-center"
+              >
+                <div>
+                  <p className="text-xs font-black uppercase tracking-wider text-coral">
+                    {b.status.replace("_", " ")}
+                  </p>
+                  <h3 className="mt-2 text-xl font-extrabold">{b.serviceName}</h3>
+                  <p className="mt-2 text-sm text-ink/50">
+                    {b.date} at {b.time} · {b.address}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <b>{money(b.amount)}</b>
+                  {provider && b.status === "pending" && (
+                    <button
+                      onClick={() => update(b._id, "confirmed")}
+                      className="rounded-lg bg-leaf px-4 py-2 text-sm font-bold text-white"
+                    >
+                      Accept
+                    </button>
+                  )}
+                  {provider && b.status === "confirmed" && (
+                    <button
+                      onClick={() => update(b._id, "completed")}
+                      className="rounded-lg bg-ink px-4 py-2 text-sm font-bold text-white"
+                    >
+                      Complete
+                    </button>
+                  )}
+                </div>
+              </article>
+            ))
+          ) : (
+            <Empty
+              text={
+                provider ? "New customer requests will appear here." : "You have no bookings yet."
+              }
+            />
+          )}
+        </div>
+      </main>
+    </Protected>
+  );
+}
+function Empty({ text }) {
+  return (
+    <div className="my-10 rounded-3xl border border-dashed border-ink/20 p-12 text-center text-ink/50">
+      {text}
+    </div>
+  );
+}
+function StaticPage({ pro = false }) {
+  return (
+    <main className="mx-auto max-w-5xl px-5 py-20 text-center">
+      <span className="text-5xl">{pro ? "🧰" : "✨"}</span>
+      <h1 className="mt-6 font-display text-6xl">
+        {pro ? "Grow your business with FindMyNeed" : "Simple, safe and local"}
+      </h1>
+      <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-ink/60">
+        {pro
+          ? "Build a trusted profile, receive nearby job requests, manage your schedule and get paid securely."
+          : "Search, compare trusted professionals, choose a slot, pay securely and track the job from your dashboard."}
+      </p>
+      <Link
+        to={pro ? "/signup" : "/services"}
+        className="mt-9 inline-flex rounded-full bg-ink px-7 py-4 font-extrabold text-white"
+      >
+        {pro ? "Join as a professional" : "Explore services"}
+      </Link>
+    </main>
+  );
+}
+function Success() {
+  return (
+    <Protected>
+      <main className="grid min-h-[65vh] place-items-center px-5 text-center">
+        <div>
+          <CheckCircle2 className="mx-auto text-leaf" size={72} />
+          <h1 className="mt-5 font-display text-6xl">Booking confirmed!</h1>
+          <p className="mt-4 text-ink/55">
+            Your professional will receive the request and you’ll see updates in your dashboard.
+          </p>
+          <Link
+            to="/dashboard"
+            className="mt-8 inline-block rounded-full bg-ink px-7 py-4 font-bold text-white"
+          >
+            View my bookings
+          </Link>
+        </div>
+      </main>
+    </Protected>
+  );
+}
+function App() {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <Shell>
+          <Routes>
+            <Route path="/" element={<MarketplaceHome services={fallbackServices} />} />
+            <Route path="/services" element={<Services />} />
+            <Route path="/services/:id" element={<ServiceDetail />} />
+            <Route path="/find/:id" element={<ServiceFinder services={fallbackServices} />} />
+            <Route path="/vehicle-services" element={<VehicleHub />} />
+            <Route path="/mechanics" element={<Mechanics />} />
+            <Route path="/mechanics/:id" element={<MechanicDetail />} />
+            <Route path="/professionals" element={<ProfessionalsSearch />} />
+            <Route path="/professionals/:id" element={<ProfessionalProfile />} />
+            <Route path="/login" element={<AuthPage />} />
+            <Route path="/signup" element={<AuthPage register />} />
+            <Route path="/book/:id" element={<Booking />} />
+            <Route path="/checkout/:id" element={<Checkout />} />
+            <Route path="/booking-success/:id" element={<Success />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/provider/dashboard" element={<Dashboard provider />} />
+            <Route path="/admin/dashboard" element={<AdminDashboard Protected={Protected} />} />
+            <Route path="/become-a-pro" element={<StaticPage pro />} />
+            <Route path="/how-it-works" element={<StaticPage />} />
+            <Route path="*" element={<Navigate to="/" />} />
+          </Routes>
+        </Shell>
+      </AuthProvider>
+    </BrowserRouter>
+  );
+}
+export default App;
