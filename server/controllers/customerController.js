@@ -1,12 +1,20 @@
-import { query } from '../config/database.js';
+import { query } from "../config/database.js";
 
 // Search Providers
 export const searchProviders = async (req, res) => {
   try {
-    const { search, suburb, categoryId, minRating, page = 1, limit = 12 } = req.query;
+    const {
+      search,
+      suburb,
+      categoryId,
+      minRating,
+      page = 1,
+      limit = 12,
+    } = req.query;
     const offset = (page - 1) * limit;
 
-    let whereClause = 'WHERE p.is_verified = true AND u.is_active = true AND u.is_approved = true';
+    let whereClause =
+      "WHERE p.is_verified = true AND u.is_active = true AND u.is_approved = true";
     const params = [];
     let paramCount = 1;
 
@@ -36,7 +44,8 @@ export const searchProviders = async (req, res) => {
 
     params.push(limit, offset);
 
-    const result = await query(`
+    const result = await query(
+      `
       SELECT p.id, p.business_name, p.business_description, p.business_logo,
              p.suburb, p.city, p.state, p.rating, p.total_reviews, p.total_bookings
       FROM providers p
@@ -44,23 +53,28 @@ export const searchProviders = async (req, res) => {
       ${whereClause}
       ORDER BY p.rating DESC, p.total_reviews DESC
       LIMIT $${paramCount} OFFSET $${paramCount + 1}
-    `, params);
+    `,
+      params,
+    );
 
-    const countResult = await query(`
+    const countResult = await query(
+      `
       SELECT COUNT(*) FROM providers p
       JOIN users u ON p.user_id = u.id
       ${whereClause}
-    `, params.slice(0, -2));
+    `,
+      params.slice(0, -2),
+    );
 
     res.json({
       providers: result.rows,
       total: parseInt(countResult.rows[0].count),
       page: parseInt(page),
-      totalPages: Math.ceil(countResult.rows[0].count / limit)
+      totalPages: Math.ceil(countResult.rows[0].count / limit),
     });
   } catch (error) {
-    console.error('Search providers error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Search providers error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -74,11 +88,11 @@ export const getProviderById = async (req, res) => {
        FROM providers p
        JOIN users u ON p.user_id = u.id
        WHERE p.id = $1`,
-      [id]
+      [id],
     );
 
     if (providerResult.rows.length === 0) {
-      return res.status(404).json({ message: 'Provider not found' });
+      return res.status(404).json({ message: "Provider not found" });
     }
 
     const servicesResult = await query(
@@ -87,7 +101,7 @@ export const getProviderById = async (req, res) => {
        LEFT JOIN service_categories sc ON s.category_id = sc.id
        WHERE s.provider_id = $1 AND s.is_active = true
        ORDER BY s.created_at DESC`,
-      [id]
+      [id],
     );
 
     const reviewsResult = await query(
@@ -97,17 +111,17 @@ export const getProviderById = async (req, res) => {
        WHERE r.provider_id = $1 AND r.is_approved = true AND r.is_hidden = false
        ORDER BY r.created_at DESC
        LIMIT 10`,
-      [id]
+      [id],
     );
 
     res.json({
       provider: providerResult.rows[0],
       services: servicesResult.rows,
-      reviews: reviewsResult.rows
+      reviews: reviewsResult.rows,
     });
   } catch (error) {
-    console.error('Get provider by ID error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Get provider by ID error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -115,34 +129,60 @@ export const getProviderById = async (req, res) => {
 export const createBooking = async (req, res) => {
   try {
     const {
-      providerId, serviceId, bookingDate, bookingTime,
-      customerName, customerEmail, customerPhone,
-      address, suburb, notes, totalPrice
+      providerId,
+      serviceId,
+      bookingDate,
+      bookingTime,
+      customerName,
+      customerEmail,
+      customerPhone,
+      address,
+      suburb,
+      notes,
+      totalPrice,
+      requirements = {},
     } = req.body;
 
     // Validate required fields
-    if (!providerId || !serviceId || !bookingDate || !customerName || !customerEmail) {
-      return res.status(400).json({ message: 'Missing required fields' });
+    if (
+      !providerId ||
+      !serviceId ||
+      !bookingDate ||
+      !customerName ||
+      !customerEmail
+    ) {
+      return res.status(400).json({ message: "Missing required fields" });
     }
 
     const result = await query(
       `INSERT INTO bookings (
         customer_id, provider_id, service_id, booking_date, booking_time,
         customer_name, customer_email, customer_phone,
-        address, suburb, notes, total_price, status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        address, suburb, notes, total_price, status, requirements
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
       RETURNING *`,
       [
-        req.user.id, providerId, serviceId, bookingDate, bookingTime,
-        customerName, customerEmail, customerPhone,
-        address, suburb, notes, totalPrice, 'pending'
-      ]
+        req.user.id,
+        providerId,
+        serviceId,
+        bookingDate,
+        bookingTime,
+        customerName,
+        customerEmail,
+        customerPhone,
+        address,
+        suburb,
+        notes,
+        totalPrice,
+        "pending",
+        requirements,
+      ],
     );
 
     // Create notification for provider
     const providerResult = await query(
-      'SELECT user_id FROM providers WHERE id = $1',
-      [providerId]
+      "SELECT user_id FROM providers WHERE id = $1",
+      [providerId],
     );
 
     if (providerResult.rows.length > 0) {
@@ -151,20 +191,20 @@ export const createBooking = async (req, res) => {
          VALUES ($1, $2, $3, $4)`,
         [
           providerResult.rows[0].user_id,
-          'in_app',
-          'New Booking Request',
-          `New booking request from ${customerName}`
-        ]
+          "in_app",
+          "New Booking Request",
+          `New booking request from ${customerName}`,
+        ],
       );
     }
 
     res.status(201).json({
-      message: 'Booking created successfully',
-      booking: result.rows[0]
+      message: "Booking created successfully",
+      booking: result.rows[0],
     });
   } catch (error) {
-    console.error('Create booking error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error("Create booking error:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
@@ -182,13 +222,13 @@ export const getCustomerBookings = async (req, res) => {
        LEFT JOIN reviews r ON b.id = r.booking_id AND r.deleted_at IS NULL
        WHERE b.customer_id = $1
        ORDER BY b.booking_date DESC, b.created_at DESC`,
-      [req.user.id]
+      [req.user.id],
     );
 
     res.json(result.rows);
   } catch (error) {
-    console.error('Get customer bookings error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Get customer bookings error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -205,17 +245,22 @@ export const cancelBooking = async (req, res) => {
         cancellation_reason = $2
        WHERE id = $3 AND customer_id = $1 AND status IN ('pending', 'approved')
        RETURNING *`,
-      [req.user.id, reason, id]
+      [req.user.id, reason, id],
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ message: 'Booking not found or cannot be cancelled' });
+      return res
+        .status(404)
+        .json({ message: "Booking not found or cannot be cancelled" });
     }
 
-    res.json({ message: 'Booking cancelled successfully', booking: result.rows[0] });
+    res.json({
+      message: "Booking cancelled successfully",
+      booking: result.rows[0],
+    });
   } catch (error) {
-    console.error('Cancel booking error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Cancel booking error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -230,23 +275,27 @@ export const createReview = async (req, res) => {
        FROM bookings b
        JOIN providers p ON b.provider_id = p.id
        WHERE b.id = $1 AND b.customer_id = $2 AND b.status = 'completed'`,
-      [bookingId, req.user.id]
+      [bookingId, req.user.id],
     );
 
     if (bookingResult.rows.length === 0) {
-      return res.status(400).json({ message: 'Booking not found or not completed' });
+      return res
+        .status(400)
+        .json({ message: "Booking not found or not completed" });
     }
 
     const booking = bookingResult.rows[0];
 
     // Check if review already exists
     const existingReview = await query(
-      'SELECT id FROM reviews WHERE booking_id = $1',
-      [bookingId]
+      "SELECT id FROM reviews WHERE booking_id = $1",
+      [bookingId],
     );
 
     if (existingReview.rows.length > 0) {
-      return res.status(400).json({ message: 'Review already exists for this booking' });
+      return res
+        .status(400)
+        .json({ message: "Review already exists for this booking" });
     }
 
     // Create review
@@ -254,24 +303,27 @@ export const createReview = async (req, res) => {
       `INSERT INTO reviews (booking_id, provider_id, customer_id, rating, comment)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
-      [bookingId, booking.provider_id, req.user.id, rating, comment]
+      [bookingId, booking.provider_id, req.user.id, rating, comment],
     );
 
     // Update provider rating
-    await query(`
+    await query(
+      `
       UPDATE providers SET
         rating = (SELECT AVG(rating)::NUMERIC(3,2) FROM reviews WHERE provider_id = $1 AND is_approved = true),
         total_reviews = (SELECT COUNT(*) FROM reviews WHERE provider_id = $1 AND is_approved = true)
       WHERE id = $1
-    `, [booking.provider_id]);
+    `,
+      [booking.provider_id],
+    );
 
     res.status(201).json({
-      message: 'Review submitted successfully',
-      review: result.rows[0]
+      message: "Review submitted successfully",
+      review: result.rows[0],
     });
   } catch (error) {
-    console.error('Create review error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Create review error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -281,13 +333,13 @@ export const getCategories = async (req, res) => {
     const result = await query(
       `SELECT * FROM service_categories 
        WHERE is_active = true 
-       ORDER BY display_order ASC, name ASC`
+       ORDER BY display_order ASC, name ASC`,
     );
 
     res.json(result.rows);
   } catch (error) {
-    console.error('Get categories error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Get categories error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -302,12 +354,12 @@ export const getServicesByCategory = async (req, res) => {
        JOIN providers p ON s.provider_id = p.id
        WHERE s.category_id = $1 AND s.is_active = true
        ORDER BY p.rating DESC`,
-      [categoryId]
+      [categoryId],
     );
 
     res.json(result.rows);
   } catch (error) {
-    console.error('Get services by category error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Get services by category error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };

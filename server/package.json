@@ -11,6 +11,7 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "init-db": "node initDb.js",
+    "migrate-marketplace": "node migrateMarketplace.js",
     "update-admin-pwd": "node updateAdminPassword.js"
   },
   "dependencies": {
