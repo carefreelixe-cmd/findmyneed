@@ -124,7 +124,7 @@ export default function Home() {
               </span>
               <h1 className="mt-8 text-6xl font-black leading-[.92] tracking-[-.055em] text-white sm:text-7xl lg:text-[88px]">
                 Everyday services,{" "}
-                <em className="font-serif font-medium text-[#d9f99d]">made easy.</em>
+                <em className="font-display font-semibold text-[#d9f99d]">made easy.</em>
               </h1>
               <p className="mt-7 max-w-2xl text-lg leading-8 text-white/70">
                 Compare verified professionals, choose a convenient time and pay safely—from home
