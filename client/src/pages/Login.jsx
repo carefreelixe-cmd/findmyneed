@@ -34,10 +34,10 @@ export default function Login() {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center p-4"
+      className="auth-screen auth-login min-h-screen flex items-center justify-center p-4"
       style={{
         backgroundImage:
-          "linear-gradient(rgba(27, 58, 95, 0.92), rgba(44, 62, 80, 0.88)), url(https://images.unsplash.com/photo-1497366216548-37526070297c?w=1920&h=1080&fit=crop)",
+          "linear-gradient(90deg, rgba(16, 41, 30, 0.98), rgba(16, 41, 30, 0.78)), url(/images/marketplace/hero-local-services.png)",
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundAttachment: "fixed",
@@ -60,7 +60,7 @@ export default function Login() {
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-2">
             Welcome Back
           </h1>
-          <p className="text-sm sm:text-base text-gray-200">Sign in to continue to ServiceHub</p>
+          <p className="text-sm sm:text-base text-gray-200">Sign in to continue to FindMyNeed</p>
         </div>
 
         {/* Error Alert */}
@@ -82,7 +82,7 @@ export default function Login() {
         )}
 
         {/* Form Card */}
-        <div className="bg-white/95 backdrop-blur-sm rounded-2xl sm:rounded-3xl shadow-2xl p-5 sm:p-6 md:p-8 mb-4 sm:mb-6 border border-white/20">
+        <div className="auth-card bg-white/95 backdrop-blur-sm rounded-2xl sm:rounded-3xl shadow-2xl p-5 sm:p-6 md:p-8 mb-4 sm:mb-6 border border-white/20">
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Email Field */}
             <div>
@@ -167,7 +167,7 @@ export default function Login() {
                   Signing in...
                 </span>
               ) : (
-                "Sign In to ServiceHub"
+                "Sign in to FindMyNeed"
               )}
             </button>
           </form>

@@ -397,3 +397,198 @@
     @apply shadow-lg;
   }
 }
+
+/* Unified dashboard experience */
+.app-dashboard {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 0 0, rgb(217 249 157 / 18%), transparent 26rem), #f5f4ed !important;
+}
+
+.auth-screen {
+  position: relative;
+  background-position: center !important;
+  background-size: cover !important;
+}
+
+.auth-screen::before {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  content: "";
+  background:
+    radial-gradient(circle at 15% 15%, rgb(217 249 157 / 13%), transparent 26rem),
+    radial-gradient(circle at 90% 90%, rgb(232 93 63 / 12%), transparent 22rem);
+}
+
+.auth-screen > div {
+  position: relative;
+  z-index: 1;
+}
+
+.auth-card {
+  border: 1px solid rgb(255 255 255 / 32%) !important;
+  border-radius: 1.75rem !important;
+  background: rgb(255 255 255 / 96%) !important;
+  box-shadow: 0 30px 80px rgb(4 18 11 / 28%) !important;
+}
+
+.auth-card input,
+.auth-card select {
+  border-color: rgb(23 35 28 / 12%) !important;
+  border-radius: 0.8rem !important;
+  background: #faf9f4 !important;
+}
+
+.auth-card input:focus,
+.auth-card select:focus {
+  border-color: #246c49 !important;
+  box-shadow: 0 0 0 3px rgb(36 108 73 / 12%) !important;
+}
+
+.auth-card button[type="submit"] {
+  background: #173c2b !important;
+  border-radius: 0.85rem !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.auth-card button[type="submit"]:hover {
+  background: #246c49 !important;
+}
+
+.dashboard-topbar {
+  background: rgb(16 41 30 / 96%) !important;
+  border-bottom: 1px solid rgb(255 255 255 / 10%);
+  box-shadow: 0 10px 35px rgb(16 41 30 / 12%);
+  backdrop-filter: blur(18px);
+}
+
+.dashboard-topbar .nav-link {
+  border-radius: 0.75rem;
+  color: rgb(255 255 255 / 68%) !important;
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.dashboard-topbar .nav-link:hover,
+.dashboard-topbar .nav-link:focus-visible {
+  background: rgb(255 255 255 / 10%);
+  color: white !important;
+}
+
+.dashboard-content {
+  padding-top: 2.25rem !important;
+  padding-bottom: 4rem !important;
+}
+
+.app-dashboard h1,
+.app-dashboard h2,
+.app-dashboard h3 {
+  color: #17231c;
+}
+
+.app-dashboard .card,
+.app-dashboard .card-hover,
+.app-dashboard .card-elevated,
+.app-dashboard section > .bg-white,
+.app-dashboard main > .bg-white {
+  border: 1px solid rgb(23 35 28 / 8%);
+  border-radius: 1.25rem;
+  box-shadow: 0 10px 35px rgb(23 35 28 / 6%);
+}
+
+.app-dashboard table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.875rem;
+}
+
+.app-dashboard thead {
+  background: #efeee6;
+}
+
+.app-dashboard th {
+  color: rgb(23 35 28 / 55%);
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.app-dashboard th,
+.app-dashboard td {
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid rgb(23 35 28 / 8%);
+  vertical-align: middle;
+}
+
+.app-dashboard tbody tr:hover {
+  background: #faf9f4;
+}
+
+.app-dashboard input:not([type="checkbox"]):not([type="radio"]),
+.app-dashboard select,
+.app-dashboard textarea {
+  min-height: 2.85rem;
+  border: 1px solid rgb(23 35 28 / 14%) !important;
+  border-radius: 0.75rem !important;
+  background: white !important;
+  color: #17231c !important;
+  outline: none;
+}
+
+.app-dashboard input:focus,
+.app-dashboard select:focus,
+.app-dashboard textarea:focus {
+  border-color: #246c49 !important;
+  box-shadow: 0 0 0 3px rgb(36 108 73 / 12%) !important;
+}
+
+.app-dashboard button,
+.app-dashboard a {
+  outline-offset: 3px;
+}
+
+.app-dashboard .bg-blue-600,
+.app-dashboard .bg-green-600 {
+  background-color: #246c49 !important;
+}
+
+.app-dashboard .hover\:bg-blue-700:hover,
+.app-dashboard .hover\:bg-green-700:hover {
+  background-color: #173c2b !important;
+}
+
+.app-dashboard .text-blue-600,
+.app-dashboard .text-green-600 {
+  color: #246c49 !important;
+}
+
+.app-dashboard .focus\:ring-blue-500:focus,
+.app-dashboard .focus\:ring-green-500:focus {
+  --tw-ring-color: rgb(36 108 73 / 22%) !important;
+}
+
+@media (max-width: 767px) {
+  .dashboard-topbar > div > div {
+    min-height: 4.5rem;
+    height: auto;
+    gap: 0.75rem;
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+  }
+
+  .dashboard-topbar .text-2xl {
+    font-size: 1rem;
+  }
+
+  .dashboard-content {
+    padding-top: 1.25rem !important;
+  }
+
+  .app-dashboard table {
+    min-width: 44rem;
+  }
+}

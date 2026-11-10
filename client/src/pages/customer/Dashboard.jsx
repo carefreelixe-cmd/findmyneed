@@ -324,8 +324,8 @@ export default function CustomerDashboard() {
   };
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "#F5F7FA" }}>
-      <nav className="shadow-md sticky top-0 z-40" style={{ backgroundColor: "#1B3A5F" }}>
+    <div className="app-dashboard customer-dashboard min-h-screen">
+      <nav className="dashboard-topbar sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             <div className="flex items-center gap-8">
@@ -336,7 +336,7 @@ export default function CustomerDashboard() {
                 >
                   <FaCalendar className="text-white text-lg" />
                 </div>
-                <div className="text-2xl font-bold text-white">ServiceHub</div>
+                <div className="text-2xl font-bold text-white">FindMyNeed</div>
               </div>
               <div className="flex gap-1">
                 <Link
@@ -364,7 +364,7 @@ export default function CustomerDashboard() {
         </div>
       </nav>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="dashboard-content max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Routes>
           <Route index element={<DashboardHome />} />
         </Routes>

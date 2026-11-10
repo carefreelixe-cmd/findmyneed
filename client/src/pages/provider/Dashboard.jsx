@@ -1251,9 +1251,9 @@ export default function ProviderDashboard() {
   };
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "#F5F7FA" }}>
+    <div className="app-dashboard provider-dashboard min-h-screen">
       {/* Navigation Bar */}
-      <nav className="shadow-md sticky top-0 z-50" style={{ backgroundColor: "#1B3A5F" }}>
+      <nav className="dashboard-topbar sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             <div className="flex gap-8 items-center">
@@ -1264,7 +1264,7 @@ export default function ProviderDashboard() {
                 >
                   <FaStore className="text-white text-lg" />
                 </div>
-                <div className="text-2xl font-bold text-white">Provider</div>
+                <div className="text-2xl font-bold text-white">FindMyNeed Pro</div>
               </div>
               <div className="hidden md:flex gap-1">
                 <Link
@@ -1352,7 +1352,7 @@ export default function ProviderDashboard() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="dashboard-content max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Routes>
           <Route index element={<DashboardHome />} />
           <Route path="profile" element={<Profile />} />

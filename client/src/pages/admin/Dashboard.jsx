@@ -1124,8 +1124,8 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "#F5F7FA" }}>
-      <nav className="shadow-md sticky top-0 z-40" style={{ backgroundColor: "#1B3A5F" }}>
+    <div className="app-dashboard admin-dashboard min-h-screen">
+      <nav className="dashboard-topbar sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-8">
@@ -1136,7 +1136,7 @@ export default function AdminDashboard() {
                 >
                   <FaCog className="text-white text-lg" />
                 </div>
-                <div className="text-2xl font-bold text-white">Admin</div>
+                <div className="text-2xl font-bold text-white">FindMyNeed Admin</div>
               </div>
               <div className="hidden md:flex gap-1">
                 <Link
@@ -1208,7 +1208,7 @@ export default function AdminDashboard() {
         </div>
       </nav>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="dashboard-content max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <ErrorBoundary>
           <Routes>
             <Route index element={<DashboardHome />} />

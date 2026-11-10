@@ -68,10 +68,10 @@ export default function Register() {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center p-4"
+      className="auth-screen auth-register min-h-screen flex items-center justify-center p-4"
       style={{
         backgroundImage:
-          "linear-gradient(rgba(0, 168, 107, 0.9), rgba(27, 58, 95, 0.88)), url(https://images.unsplash.com/photo-1521737711867-e3b97375f902?w=1920&h=1080&fit=crop)",
+          "linear-gradient(90deg, rgba(16, 41, 30, 0.98), rgba(16, 41, 30, 0.72)), url(/images/marketplace/trusted-professionals.png)",
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundAttachment: "fixed",
@@ -92,7 +92,7 @@ export default function Register() {
             <FiBriefcase className="w-6 h-6 sm:w-8 sm:h-8 text-success-green" />
           </div>
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-1">
-            Join ServiceHub
+            Join FindMyNeed
           </h1>
           <p className="text-gray-100 text-sm sm:text-base">Create your free account today</p>
         </div>
@@ -116,7 +116,7 @@ export default function Register() {
         )}
 
         {/* Form Card */}
-        <div className="bg-white/95 backdrop-blur-sm rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-5 md:p-6 border border-white/20">
+        <div className="auth-card bg-white/95 backdrop-blur-sm rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-5 md:p-6 border border-white/20">
           <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
             {/* Account Type */}
             <div>
