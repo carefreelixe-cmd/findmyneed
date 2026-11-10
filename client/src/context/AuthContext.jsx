@@ -1,5 +1,7 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect } from "react";
 import axios from "axios";
+import "../lib/api";
 
 const AuthContext = createContext();
 
@@ -31,7 +33,7 @@ export const AuthProvider = ({ children }) => {
 
   const fetchUser = async () => {
     try {
-      const response = await axios.get("http://localhost:5000/api/auth/me");
+      const response = await axios.get("/api/auth/me");
       setUser(response.data);
     } catch (error) {
       console.error("Error fetching user:", error);
@@ -42,7 +44,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const login = async (email, password) => {
-    const response = await axios.post("http://localhost:5000/api/auth/login", {
+    const response = await axios.post("/api/auth/login", {
       email,
       password,
     });
@@ -55,7 +57,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const register = async (userData) => {
-    const response = await axios.post("http://localhost:5000/api/auth/register", userData);
+    const response = await axios.post("/api/auth/register", userData);
     const { token, user } = response.data;
     localStorage.setItem("token", token);
     setToken(token);

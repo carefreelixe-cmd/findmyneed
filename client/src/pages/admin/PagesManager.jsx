@@ -20,7 +20,7 @@ function PagesManager() {
 
   const fetchPages = async () => {
     try {
-      const response = await axios.get("http://localhost:5000/api/admin/features/pages");
+      const response = await axios.get("/api/admin/features/pages");
       setPages(response.data);
     } catch (error) {
       console.error("Error fetching pages:", error);
@@ -66,10 +66,10 @@ function PagesManager() {
 
     try {
       if (editingId) {
-        await axios.put(`http://localhost:5000/api/admin/features/pages/${editingId}`, formData);
+        await axios.put(`/api/admin/features/pages/${editingId}`, formData);
         alert("Page updated successfully");
       } else {
-        await axios.post("http://localhost:5000/api/admin/features/pages", formData);
+        await axios.post("/api/admin/features/pages", formData);
         alert("Page created successfully");
       }
 
@@ -102,7 +102,7 @@ function PagesManager() {
   const handleDelete = async (id) => {
     if (confirm("Are you sure you want to delete this page?")) {
       try {
-        await axios.delete(`http://localhost:5000/api/admin/features/pages/${id}`);
+        await axios.delete(`/api/admin/features/pages/${id}`);
         alert("Page deleted successfully");
         fetchPages();
       } catch (error) {

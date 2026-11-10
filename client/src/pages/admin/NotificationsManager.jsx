@@ -19,7 +19,7 @@ function NotificationsManager() {
 
   const fetchNotifications = async () => {
     try {
-      const response = await axios.get("http://localhost:5000/api/admin/features/notifications");
+      const response = await axios.get("/api/admin/features/notifications");
       setNotifications(response.data);
     } catch (error) {
       console.error("Error fetching notifications:", error);
@@ -46,7 +46,7 @@ function NotificationsManager() {
     }
 
     try {
-      await axios.post("http://localhost:5000/api/admin/features/notifications", formData);
+      await axios.post("/api/admin/features/notifications", formData);
       alert("Notification sent successfully");
 
       setFormData({
@@ -66,7 +66,7 @@ function NotificationsManager() {
   const handleDelete = async (id) => {
     if (confirm("Are you sure you want to delete this notification?")) {
       try {
-        await axios.delete(`http://localhost:5000/api/admin/features/notifications/${id}`);
+        await axios.delete(`/api/admin/features/notifications/${id}`);
         alert("Notification deleted successfully");
         fetchNotifications();
       } catch (error) {

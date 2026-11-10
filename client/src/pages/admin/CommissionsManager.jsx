@@ -21,7 +21,7 @@ function CommissionsManager() {
 
   const fetchCommissions = async () => {
     try {
-      const response = await axios.get("http://localhost:5000/api/admin/features/commissions");
+      const response = await axios.get("/api/admin/features/commissions");
       setCommissions(response.data);
     } catch (error) {
       console.error("Error fetching commissions:", error);
@@ -54,13 +54,10 @@ function CommissionsManager() {
 
     try {
       if (editingId) {
-        await axios.put(
-          `http://localhost:5000/api/admin/features/commissions/${editingId}`,
-          submitData,
-        );
+        await axios.put(`/api/admin/features/commissions/${editingId}`, submitData);
         alert("Commission updated successfully");
       } else {
-        await axios.post("http://localhost:5000/api/admin/features/commissions", submitData);
+        await axios.post("/api/admin/features/commissions", submitData);
         alert("Commission created successfully");
       }
 
@@ -95,7 +92,7 @@ function CommissionsManager() {
   const handleDelete = async (id) => {
     if (confirm("Are you sure you want to delete this commission?")) {
       try {
-        await axios.delete(`http://localhost:5000/api/admin/features/commissions/${id}`);
+        await axios.delete(`/api/admin/features/commissions/${id}`);
         alert("Commission deleted successfully");
         fetchCommissions();
       } catch (error) {

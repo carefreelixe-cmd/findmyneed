@@ -35,7 +35,7 @@ function DashboardHome() {
 
   const fetchStats = async () => {
     try {
-      const response = await axios.get("http://localhost:5000/api/admin/dashboard");
+      const response = await axios.get("/api/admin/dashboard");
       setStats(response.data);
     } catch (error) {
       console.error("Error fetching stats:", error);
@@ -230,9 +230,7 @@ function Providers() {
 
   const fetchProviders = async () => {
     try {
-      const response = await axios.get(
-        `http://localhost:5000/api/admin/providers?status=${filter}`,
-      );
+      const response = await axios.get(`/api/admin/providers?status=${filter}`);
       setProviders(response.data.providers);
     } catch (error) {
       console.error("Error fetching providers:", error);
@@ -243,22 +241,22 @@ function Providers() {
 
   const handleStatusUpdate = async (id, isApproved) => {
     try {
-      await axios.patch(`http://localhost:5000/api/admin/providers/${id}/status`, { isApproved });
+      await axios.patch(`/api/admin/providers/${id}/status`, { isApproved });
       fetchProviders();
       alert(`Provider ${isApproved ? "approved" : "rejected"} successfully`);
-    } catch (error) {
+    } catch (_error) {
       alert("Error updating provider status");
     }
   };
 
   const handleDeactivate = async (id, isActive) => {
     try {
-      await axios.patch(`http://localhost:5000/api/admin/providers/${id}/deactivate`, {
+      await axios.patch(`/api/admin/providers/${id}/deactivate`, {
         isActive: !isActive,
       });
       fetchProviders();
       alert(`Provider ${!isActive ? "activated" : "deactivated"} successfully`);
-    } catch (error) {
+    } catch (_error) {
       alert("Error updating provider status");
     }
   };
@@ -396,7 +394,7 @@ function Analytics() {
 
   const fetchAnalytics = async () => {
     try {
-      const response = await axios.get("http://localhost:5000/api/admin/analytics");
+      const response = await axios.get("/api/admin/analytics");
       setAnalytics(response.data);
     } catch (error) {
       console.error("Error fetching analytics:", error);
@@ -533,7 +531,7 @@ function Categories() {
 
   const fetchCategories = async () => {
     try {
-      const response = await axios.get("http://localhost:5000/api/admin/categories");
+      const response = await axios.get("/api/admin/categories");
       setCategories(response.data.categories || []);
     } catch (error) {
       console.error("Error fetching categories:", error);
@@ -545,12 +543,12 @@ function Categories() {
   const handleAddCategory = async (e) => {
     e.preventDefault();
     try {
-      await axios.post("http://localhost:5000/api/admin/categories", formData);
+      await axios.post("/api/admin/categories", formData);
       setFormData({ name: "", description: "" });
       setShowForm(false);
       fetchCategories();
       alert("Category added successfully");
-    } catch (error) {
+    } catch (_error) {
       alert("Error adding category");
     }
   };
@@ -558,10 +556,10 @@ function Categories() {
   const handleDeleteCategory = async (id) => {
     if (window.confirm("Are you sure you want to delete this category?")) {
       try {
-        await axios.delete(`http://localhost:5000/api/admin/categories/${id}`);
+        await axios.delete(`/api/admin/categories/${id}`);
         fetchCategories();
         alert("Category deleted successfully");
-      } catch (error) {
+      } catch (_error) {
         alert("Error deleting category");
       }
     }
@@ -659,7 +657,7 @@ function Customers() {
 
   const fetchCustomers = async () => {
     try {
-      const response = await axios.get("http://localhost:5000/api/admin/customers");
+      const response = await axios.get("/api/admin/customers");
       setCustomers(response.data.customers || []);
     } catch (error) {
       console.error("Error fetching customers:", error);
@@ -670,12 +668,12 @@ function Customers() {
 
   const handleDeactivate = async (id, isActive) => {
     try {
-      await axios.patch(`http://localhost:5000/api/admin/customers/${id}/status`, {
+      await axios.patch(`/api/admin/customers/${id}/status`, {
         isActive: !isActive,
       });
       fetchCustomers();
       alert(`Customer ${!isActive ? "activated" : "deactivated"} successfully`);
-    } catch (error) {
+    } catch (_error) {
       alert("Error updating customer status");
     }
   };
@@ -764,7 +762,7 @@ function Reviews() {
 
   const fetchReviews = async () => {
     try {
-      const response = await axios.get("http://localhost:5000/api/admin/reviews");
+      const response = await axios.get("/api/admin/reviews");
       setReviews(response.data.reviews || []);
     } catch (error) {
       console.error("Error fetching reviews:", error);
@@ -776,10 +774,10 @@ function Reviews() {
   const handleDeleteReview = async (id) => {
     if (window.confirm("Are you sure you want to delete this review?")) {
       try {
-        await axios.delete(`http://localhost:5000/api/admin/reviews/${id}`);
+        await axios.delete(`/api/admin/reviews/${id}`);
         fetchReviews();
         alert("Review deleted successfully");
-      } catch (error) {
+      } catch (_error) {
         alert("Error deleting review");
       }
     }
@@ -860,7 +858,7 @@ function ActivityLogs() {
   const fetchLogs = async () => {
     try {
       setError(null);
-      const response = await axios.get("http://localhost:5000/api/admin/activity-logs");
+      const response = await axios.get("/api/admin/activity-logs");
       setLogs(response.data.logs || []);
     } catch (error) {
       console.error("Error fetching logs:", error);
@@ -965,10 +963,7 @@ function Bookings() {
 
   const fetchBookings = async () => {
     try {
-      const url =
-        filter === "all"
-          ? "http://localhost:5000/api/admin/bookings"
-          : `http://localhost:5000/api/admin/bookings?status=${filter}`;
+      const url = filter === "all" ? "/api/admin/bookings" : `/api/admin/bookings?status=${filter}`;
       const response = await axios.get(url);
       setBookings(response.data.bookings);
     } catch (error) {
@@ -980,7 +975,7 @@ function Bookings() {
 
   const handleStatusChange = async (bookingId, newStatus) => {
     try {
-      await axios.patch(`http://localhost:5000/api/admin/bookings/${bookingId}/status`, {
+      await axios.patch(`/api/admin/bookings/${bookingId}/status`, {
         status: newStatus,
       });
       setBookings(bookings.map((b) => (b.id === bookingId ? { ...b, status: newStatus } : b)));

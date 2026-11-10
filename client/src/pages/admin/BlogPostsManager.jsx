@@ -21,7 +21,7 @@ function BlogPostsManager() {
 
   const fetchPosts = async () => {
     try {
-      const response = await axios.get("http://localhost:5000/api/admin/features/blog-posts");
+      const response = await axios.get("/api/admin/features/blog-posts");
       setPosts(response.data || []);
     } catch (error) {
       console.error("Error fetching blog posts:", error);
@@ -67,13 +67,10 @@ function BlogPostsManager() {
 
     try {
       if (editingId) {
-        await axios.put(
-          `http://localhost:5000/api/admin/features/blog-posts/${editingId}`,
-          formData,
-        );
+        await axios.put(`/api/admin/features/blog-posts/${editingId}`, formData);
         alert("Blog post updated successfully");
       } else {
-        await axios.post("http://localhost:5000/api/admin/features/blog-posts", formData);
+        await axios.post("/api/admin/features/blog-posts", formData);
         alert("Blog post created successfully");
       }
 
@@ -108,7 +105,7 @@ function BlogPostsManager() {
   const handleDelete = async (id) => {
     if (confirm("Are you sure you want to delete this blog post?")) {
       try {
-        await axios.delete(`http://localhost:5000/api/admin/features/blog-posts/${id}`);
+        await axios.delete(`/api/admin/features/blog-posts/${id}`);
         alert("Blog post deleted successfully");
         fetchPosts();
       } catch (error) {

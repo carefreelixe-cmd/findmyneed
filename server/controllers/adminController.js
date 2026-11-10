@@ -1,5 +1,5 @@
-import { query } from '../config/database.js';
-import bcrypt from 'bcryptjs';
+import { query, withTransaction } from "../config/database.js";
+import bcrypt from "bcryptjs";
 
 // Get Dashboard Stats
 export const getDashboardStats = async (req, res) => {
@@ -39,11 +39,11 @@ export const getDashboardStats = async (req, res) => {
     res.json({
       stats: stats.rows[0],
       recentBookings: recentBookings.rows,
-      topProviders: topProviders.rows
+      topProviders: topProviders.rows,
     });
   } catch (error) {
-    console.error('Dashboard stats error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Dashboard stats error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -53,14 +53,14 @@ export const getAllProviders = async (req, res) => {
     const { page = 1, limit = 20, status, search } = req.query;
     const offset = (page - 1) * limit;
 
-    let whereClause = 'WHERE 1=1';
+    let whereClause = "WHERE 1=1";
     const params = [];
     let paramCount = 1;
 
-    if (status === 'pending') {
-      whereClause += ' AND u.is_approved = false';
-    } else if (status === 'approved') {
-      whereClause += ' AND u.is_approved = true';
+    if (status === "pending") {
+      whereClause += " AND u.is_approved = false";
+    } else if (status === "approved") {
+      whereClause += " AND u.is_approved = true";
     }
 
     if (search) {
@@ -71,30 +71,36 @@ export const getAllProviders = async (req, res) => {
 
     params.push(limit, offset);
 
-    const result = await query(`
+    const result = await query(
+      `
       SELECT p.*, u.email, u.phone, u.is_active, u.is_approved, u.created_at as user_created_at
       FROM providers p
       JOIN users u ON p.user_id = u.id
       ${whereClause}
       ORDER BY p.created_at DESC
       LIMIT $${paramCount} OFFSET $${paramCount + 1}
-    `, params);
+    `,
+      params,
+    );
 
-    const countResult = await query(`
+    const countResult = await query(
+      `
       SELECT COUNT(*) FROM providers p
       JOIN users u ON p.user_id = u.id
       ${whereClause}
-    `, params.slice(0, -2));
+    `,
+      params.slice(0, -2),
+    );
 
     res.json({
       providers: result.rows,
       total: parseInt(countResult.rows[0].count),
       page: parseInt(page),
-      totalPages: Math.ceil(countResult.rows[0].count / limit)
+      totalPages: Math.ceil(countResult.rows[0].count / limit),
     });
   } catch (error) {
-    console.error('Get providers error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Get providers error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -104,45 +110,78 @@ export const updateProviderStatus = async (req, res) => {
     const { id } = req.params;
     const { isApproved } = req.body;
 
-    // Update user approval status
-    const result = await query(
-      `UPDATE users SET is_approved = $1 
-       WHERE id = (SELECT user_id FROM providers WHERE id = $2)
-       RETURNING id`,
-      [isApproved, id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ message: 'Provider not found' });
-    }
-
-    // Also update provider verification status when approved
-    if (isApproved) {
-      await query(
-        `UPDATE providers SET is_verified = true WHERE id = $1`,
-        [id]
+    await withTransaction(async (client) => {
+      const result = await client.query(
+        `UPDATE users SET is_approved = $1
+         WHERE id = (SELECT user_id FROM providers WHERE id = $2)
+         RETURNING id, first_name`,
+        [isApproved, id],
       );
-    }
 
-    // Log activity
-    await query(
-      `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, new_values)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [
-        req.user.id,
-        isApproved ? 'approve_provider' : 'reject_provider',
-        'provider',
-        id,
-        JSON.stringify({ isApproved })
-      ]
-    );
+      if (result.rowCount === 0) {
+        const error = new Error("Provider not found");
+        error.statusCode = 404;
+        throw error;
+      }
 
-    res.json({ 
-      message: `Provider ${isApproved ? 'approved' : 'rejected'} successfully` 
+      await client.query(
+        `UPDATE providers SET is_verified = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
+        [isApproved, id],
+      );
+      await client.query(
+        `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, new_values)
+         VALUES ($1, $2, 'provider', $3, $4)`,
+        [
+          req.user.id,
+          isApproved ? "approve_provider" : "reject_provider",
+          id,
+          JSON.stringify({ isApproved }),
+        ],
+      );
+      const notification = await client.query(
+        `INSERT INTO notifications (user_id, type, subject, message)
+         VALUES ($1, 'email', $2, $3) RETURNING id`,
+        [
+          result.rows[0].id,
+          isApproved
+            ? "Professional profile approved"
+            : "Professional application update",
+          isApproved
+            ? "Your profile is approved and can now receive bookings."
+            : "Your professional application was not approved. Contact support for details.",
+        ],
+      );
+      await client.query(
+        `INSERT INTO outbox_events (topic, aggregate_type, aggregate_id, payload)
+         VALUES ('notification.send', 'provider', $1, $2)`,
+        [
+          id,
+          {
+            notificationId: notification.rows[0].id,
+            templateKey: isApproved ? "provider_approved" : "general",
+            data: {
+              firstName: result.rows[0].first_name,
+              title: isApproved
+                ? "Your profile is approved"
+                : "Application update",
+              message: isApproved
+                ? "Your professional profile is live and ready for service listings."
+                : "Your application needs attention. Contact support for more information.",
+              dashboardUrl: `${process.env.FRONTEND_URL || "http://localhost:5173"}/provider`,
+            },
+          },
+        ],
+      );
+    });
+
+    res.json({
+      message: `Provider ${isApproved ? "approved" : "rejected"} successfully`,
     });
   } catch (error) {
-    console.error('Update provider status error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Update provider status error:", error);
+    res.status(error.statusCode || 500).json({
+      message: error.statusCode ? error.message : "Server error",
+    });
   }
 };
 
@@ -164,28 +203,34 @@ export const getAllCustomers = async (req, res) => {
 
     params.push(limit, offset);
 
-    const result = await query(`
+    const result = await query(
+      `
       SELECT id, email, first_name, last_name, phone, is_active, created_at, last_login_at,
              (SELECT COUNT(*) FROM bookings WHERE customer_id = users.id) as total_bookings
       FROM users
       ${whereClause}
       ORDER BY created_at DESC
       LIMIT $${paramCount} OFFSET $${paramCount + 1}
-    `, params);
+    `,
+      params,
+    );
 
-    const countResult = await query(`
+    const countResult = await query(
+      `
       SELECT COUNT(*) FROM users ${whereClause}
-    `, params.slice(0, -2));
+    `,
+      params.slice(0, -2),
+    );
 
     res.json({
       customers: result.rows,
       total: parseInt(countResult.rows[0].count),
       page: parseInt(page),
-      totalPages: Math.ceil(countResult.rows[0].count / limit)
+      totalPages: Math.ceil(countResult.rows[0].count / limit),
     });
   } catch (error) {
-    console.error('Get customers error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Get customers error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -195,7 +240,7 @@ export const getAllBookings = async (req, res) => {
     const { page = 1, limit = 20, status, search } = req.query;
     const offset = (page - 1) * limit;
 
-    let whereClause = 'WHERE 1=1';
+    let whereClause = "WHERE 1=1";
     const params = [];
     let paramCount = 1;
 
@@ -213,7 +258,8 @@ export const getAllBookings = async (req, res) => {
 
     params.push(limit, offset);
 
-    const result = await query(`
+    const result = await query(
+      `
       SELECT b.*, s.name as service_name, p.business_name as provider_name, p.id as provider_id
       FROM bookings b
       LEFT JOIN services s ON b.service_id = s.id
@@ -221,21 +267,26 @@ export const getAllBookings = async (req, res) => {
       ${whereClause}
       ORDER BY b.created_at DESC
       LIMIT $${paramCount} OFFSET $${paramCount + 1}
-    `, params);
+    `,
+      params,
+    );
 
-    const countResult = await query(`
+    const countResult = await query(
+      `
       SELECT COUNT(*) FROM bookings b ${whereClause}
-    `, params.slice(0, -2));
+    `,
+      params.slice(0, -2),
+    );
 
     res.json({
       bookings: result.rows,
       total: parseInt(countResult.rows[0].count),
       page: parseInt(page),
-      totalPages: Math.ceil(countResult.rows[0].count / limit)
+      totalPages: Math.ceil(countResult.rows[0].count / limit),
     });
   } catch (error) {
-    console.error('Get bookings error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Get bookings error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -245,22 +296,29 @@ export const toggleUserStatus = async (req, res) => {
     const { id } = req.params;
     const { isActive } = req.body;
 
-    await query('UPDATE users SET is_active = $1 WHERE id = $2', [isActive, id]);
+    await query("UPDATE users SET is_active = $1 WHERE id = $2", [
+      isActive,
+      id,
+    ]);
 
-    res.json({ message: 'User status updated successfully' });
+    res.json({ message: "User status updated successfully" });
   } catch (error) {
-    console.error('Toggle user status error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Toggle user status error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
 // Get Analytics
 export const getAnalytics = async (req, res) => {
   try {
-    const totalBookings = await query('SELECT COUNT(*) FROM bookings');
-    const completedBookings = await query("SELECT COUNT(*) FROM bookings WHERE status = 'completed'");
-    const totalRevenue = await query('SELECT COALESCE(SUM(total_price), 0) as total FROM bookings WHERE status = \'completed\'');
-    
+    const totalBookings = await query("SELECT COUNT(*) FROM bookings");
+    const completedBookings = await query(
+      "SELECT COUNT(*) FROM bookings WHERE status = 'completed'",
+    );
+    const totalRevenue = await query(
+      "SELECT COALESCE(SUM(total_price), 0) as total FROM bookings WHERE status = 'completed'",
+    );
+
     const bookingsBySuburb = await query(`
       SELECT suburb, COUNT(*) as count
       FROM providers
@@ -292,22 +350,24 @@ export const getAnalytics = async (req, res) => {
       totalCommission: parseFloat(totalRevenue.rows[0].total) * 0.1, // 10% commission
       bookingsBySuburb: bookingsBySuburb.rows,
       topServices: topServices.rows,
-      mostViewedProviders: mostViewedProviders.rows
+      mostViewedProviders: mostViewedProviders.rows,
     });
   } catch (error) {
-    console.error('Analytics error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Analytics error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
 // Get Categories
 export const getCategories = async (req, res) => {
   try {
-    const result = await query('SELECT * FROM service_categories WHERE is_active = true ORDER BY name ASC');
+    const result = await query(
+      "SELECT * FROM service_categories WHERE is_active = true ORDER BY name ASC",
+    );
     res.json({ categories: result.rows });
   } catch (error) {
-    console.error('Get categories error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Get categories error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -317,27 +377,38 @@ export const addCategory = async (req, res) => {
     const { name, description } = req.body;
 
     if (!name) {
-      return res.status(400).json({ message: 'Category name is required' });
+      return res.status(400).json({ message: "Category name is required" });
     }
 
     const result = await query(
       `INSERT INTO service_categories (name, description, slug) 
        VALUES ($1, $2, $3) 
        RETURNING *`,
-      [name, description, name.toLowerCase().replace(/\s+/g, '-')]
+      [name, description, name.toLowerCase().replace(/\s+/g, "-")],
     );
 
     // Log activity
     await query(
       `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, new_values)
        VALUES ($1, $2, $3, $4, $5)`,
-      [req.user.id, 'add_category', 'category', result.rows[0].id, JSON.stringify({ name, description })]
+      [
+        req.user.id,
+        "add_category",
+        "category",
+        result.rows[0].id,
+        JSON.stringify({ name, description }),
+      ],
     );
 
-    res.status(201).json({ message: 'Category added successfully', category: result.rows[0] });
+    res
+      .status(201)
+      .json({
+        message: "Category added successfully",
+        category: result.rows[0],
+      });
   } catch (error) {
-    console.error('Add category error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Add category error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -346,23 +417,32 @@ export const deleteCategory = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const result = await query('DELETE FROM service_categories WHERE id = $1 RETURNING *', [id]);
+    const result = await query(
+      "DELETE FROM service_categories WHERE id = $1 RETURNING *",
+      [id],
+    );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ message: 'Category not found' });
+      return res.status(404).json({ message: "Category not found" });
     }
 
     // Log activity
     await query(
       `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, new_values)
        VALUES ($1, $2, $3, $4, $5)`,
-      [req.user.id, 'delete_category', 'category', id, JSON.stringify({ name: result.rows[0].name })]
+      [
+        req.user.id,
+        "delete_category",
+        "category",
+        id,
+        JSON.stringify({ name: result.rows[0].name }),
+      ],
     );
 
-    res.json({ message: 'Category deleted successfully' });
+    res.json({ message: "Category deleted successfully" });
   } catch (error) {
-    console.error('Delete category error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Delete category error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -383,8 +463,8 @@ export const getReviews = async (req, res) => {
 
     res.json({ reviews: result.rows });
   } catch (error) {
-    console.error('Get reviews error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Get reviews error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -400,24 +480,33 @@ export const moderateReview = async (req, res) => {
         is_hidden = COALESCE($2, is_hidden),
         updated_at = CURRENT_TIMESTAMP
        WHERE id = $3 RETURNING *`,
-      [isApproved, isHidden, id]
+      [isApproved, isHidden, id],
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ message: 'Review not found' });
+      return res.status(404).json({ message: "Review not found" });
     }
 
     // Log activity
     await query(
       `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, new_values)
        VALUES ($1, $2, $3, $4, $5)`,
-      [req.user.id, 'moderate_review', 'review', id, JSON.stringify({ is_approved: isApproved, is_hidden: isHidden })]
+      [
+        req.user.id,
+        "moderate_review",
+        "review",
+        id,
+        JSON.stringify({ is_approved: isApproved, is_hidden: isHidden }),
+      ],
     );
 
-    res.json({ message: 'Review moderated successfully', review: result.rows[0] });
+    res.json({
+      message: "Review moderated successfully",
+      review: result.rows[0],
+    });
   } catch (error) {
-    console.error('Moderate review error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Moderate review error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -428,25 +517,31 @@ export const deleteReview = async (req, res) => {
 
     // Soft delete
     const result = await query(
-      'UPDATE reviews SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *', 
-      [id]
+      "UPDATE reviews SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *",
+      [id],
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ message: 'Review not found' });
+      return res.status(404).json({ message: "Review not found" });
     }
 
     // Log activity
     await query(
       `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, new_values)
        VALUES ($1, $2, $3, $4, $5)`,
-      [req.user.id, 'delete_review', 'review', id, JSON.stringify({ reason: 'Review removed' })]
+      [
+        req.user.id,
+        "delete_review",
+        "review",
+        id,
+        JSON.stringify({ reason: "Review removed" }),
+      ],
     );
 
-    res.json({ message: 'Review deleted successfully' });
+    res.json({ message: "Review deleted successfully" });
   } catch (error) {
-    console.error('Delete review error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Delete review error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -461,8 +556,8 @@ export const getActivityLogs = async (req, res) => {
 
     res.json({ logs: result.rows });
   } catch (error) {
-    console.error('Get activity logs error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Get activity logs error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -472,31 +567,46 @@ export const updateBookingStatus = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    const validStatuses = ['pending', 'approved', 'in_progress', 'completed', 'cancelled'];
+    const validStatuses = [
+      "pending",
+      "approved",
+      "in_progress",
+      "completed",
+      "cancelled",
+    ];
     if (!validStatuses.includes(status)) {
-      return res.status(400).json({ message: 'Invalid status' });
+      return res.status(400).json({ message: "Invalid status" });
     }
 
     const result = await query(
       `UPDATE bookings SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *`,
-      [status, id]
+      [status, id],
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ message: 'Booking not found' });
+      return res.status(404).json({ message: "Booking not found" });
     }
 
     // Log activity
     await query(
       `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, new_values)
        VALUES ($1, $2, $3, $4, $5)`,
-      [req.user.id, 'update_booking_status', 'booking', id, JSON.stringify({ status })]
+      [
+        req.user.id,
+        "update_booking_status",
+        "booking",
+        id,
+        JSON.stringify({ status }),
+      ],
     );
 
-    res.json({ message: 'Booking status updated successfully', booking: result.rows[0] });
+    res.json({
+      message: "Booking status updated successfully",
+      booking: result.rows[0],
+    });
   } catch (error) {
-    console.error('Update booking status error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Update booking status error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -508,24 +618,32 @@ export const deactivateProvider = async (req, res) => {
 
     const result = await query(
       `UPDATE users SET is_active = $1 WHERE id = (SELECT user_id FROM providers WHERE id = $2) RETURNING id`,
-      [isActive, id]
+      [isActive, id],
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ message: 'Provider not found' });
+      return res.status(404).json({ message: "Provider not found" });
     }
 
     // Log activity
     await query(
       `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, new_values)
        VALUES ($1, $2, $3, $4, $5)`,
-      [req.user.id, isActive ? 'activate_provider' : 'deactivate_provider', 'provider', id, JSON.stringify({ isActive })]
+      [
+        req.user.id,
+        isActive ? "activate_provider" : "deactivate_provider",
+        "provider",
+        id,
+        JSON.stringify({ isActive }),
+      ],
     );
 
-    res.json({ message: `Provider ${isActive ? 'activated' : 'deactivated'} successfully` });
+    res.json({
+      message: `Provider ${isActive ? "activated" : "deactivated"} successfully`,
+    });
   } catch (error) {
-    console.error('Deactivate provider error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Deactivate provider error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -537,17 +655,19 @@ export const bulkImportBusinesses = async (req, res) => {
     const { businesses } = req.body; // Array of business objects from CSV
 
     if (!Array.isArray(businesses) || businesses.length === 0) {
-      return res.status(400).json({ message: 'No businesses to import' });
+      return res.status(400).json({ message: "No businesses to import" });
     }
 
     if (businesses.length > 500) {
-      return res.status(400).json({ message: 'Maximum 500 businesses allowed per import' });
+      return res
+        .status(400)
+        .json({ message: "Maximum 500 businesses allowed per import" });
     }
 
     const results = {
       successful: [],
       failed: [],
-      totalProcessed: businesses.length
+      totalProcessed: businesses.length,
     };
 
     for (let i = 0; i < businesses.length; i++) {
@@ -558,37 +678,48 @@ export const bulkImportBusinesses = async (req, res) => {
           phone,
           description,
           services = [],
-          serviceAreas = []
+          serviceAreas = [],
         } = businesses[i];
 
         // Validate required fields
         if (!businessName || !email || !phone) {
           results.failed.push({
             index: i + 1,
-            businessName: businessName || 'N/A',
-            error: 'Missing required fields: businessName, email, phone'
+            businessName: businessName || "N/A",
+            error: "Missing required fields: businessName, email, phone",
           });
           continue;
         }
 
         // Check if email already exists
-        const existingUser = await query('SELECT id FROM users WHERE email = $1', [email]);
+        const existingUser = await query(
+          "SELECT id FROM users WHERE email = $1",
+          [email],
+        );
         if (existingUser.rows.length > 0) {
           results.failed.push({
             index: i + 1,
             businessName,
-            error: 'Email already exists'
+            error: "Email already exists",
           });
           continue;
         }
 
         // Create user account
-        const passwordHash = bcrypt.hashSync('password123', 10); // Temporary password
+        const passwordHash = bcrypt.hashSync("password123", 10); // Temporary password
         const userResult = await query(
           `INSERT INTO users (email, password_hash, role, first_name, last_name, phone, is_approved)
            VALUES ($1, $2, $3, $4, $5, $6, $7)
            RETURNING id`,
-          [email, passwordHash, 'provider', businessName.split(' ')[0], businessName.split(' ').slice(1).join(' ') || 'Provider', phone, true]
+          [
+            email,
+            passwordHash,
+            "provider",
+            businessName.split(" ")[0],
+            businessName.split(" ").slice(1).join(" ") || "Provider",
+            phone,
+            true,
+          ],
         );
 
         const userId = userResult.rows[0].id;
@@ -598,7 +729,7 @@ export const bulkImportBusinesses = async (req, res) => {
           `INSERT INTO providers (user_id, business_name, business_description, is_verified)
            VALUES ($1, $2, $3, $4)
            RETURNING id`,
-          [userId, businessName, description || '', true]
+          [userId, businessName, description || "", true],
         );
 
         const providerId = providerResult.rows[0].id;
@@ -607,19 +738,19 @@ export const bulkImportBusinesses = async (req, res) => {
         if (Array.isArray(services) && services.length > 0) {
           for (const serviceName of services) {
             const serviceResult = await query(
-              'SELECT id FROM service_categories WHERE name ILIKE $1 LIMIT 1',
-              [`%${serviceName}%`]
+              "SELECT id FROM service_categories WHERE name ILIKE $1 LIMIT 1",
+              [`%${serviceName}%`],
             );
             if (serviceResult.rows.length > 0) {
               try {
                 await query(
                   `INSERT INTO provider_services (provider_id, category_id) VALUES ($1, $2)`,
-                  [providerId, serviceResult.rows[0].id]
+                  [providerId, serviceResult.rows[0].id],
                 );
               } catch (serviceError) {
                 // Ignore duplicate service errors
-                if (!serviceError.message.includes('duplicate')) {
-                  console.error('Error adding service:', serviceError.message);
+                if (!serviceError.message.includes("duplicate")) {
+                  console.error("Error adding service:", serviceError.message);
                 }
               }
             }
@@ -632,12 +763,12 @@ export const bulkImportBusinesses = async (req, res) => {
             try {
               await query(
                 `INSERT INTO provider_service_areas (provider_id, suburb) VALUES ($1, $2)`,
-                [providerId, suburb]
+                [providerId, suburb],
               );
             } catch (areaError) {
               // Ignore duplicate area errors
-              if (!areaError.message.includes('duplicate')) {
-                console.error('Error adding service area:', areaError.message);
+              if (!areaError.message.includes("duplicate")) {
+                console.error("Error adding service area:", areaError.message);
               }
             }
           }
@@ -647,31 +778,38 @@ export const bulkImportBusinesses = async (req, res) => {
           index: i + 1,
           businessName,
           email,
-          providerId
+          providerId,
         });
 
         // Log activity
         await query(
           `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, old_values, new_values)
            VALUES ($1, $2, $3, $4, $5, $6)`,
-          [req.user.id, 'bulk_import_business', 'provider', providerId, null, JSON.stringify({ businessName, email })]
+          [
+            req.user.id,
+            "bulk_import_business",
+            "provider",
+            providerId,
+            null,
+            JSON.stringify({ businessName, email }),
+          ],
         );
       } catch (itemError) {
         results.failed.push({
           index: i + 1,
-          businessName: businesses[i].businessName || 'N/A',
-          error: itemError.message
+          businessName: businesses[i].businessName || "N/A",
+          error: itemError.message,
         });
       }
     }
 
     res.json({
       message: `Import completed: ${results.successful.length} successful, ${results.failed.length} failed`,
-      results
+      results,
     });
   } catch (error) {
-    console.error('Bulk import error:', error);
-    res.status(500).json({ message: 'Server error during bulk import' });
+    console.error("Bulk import error:", error);
+    res.status(500).json({ message: "Server error during bulk import" });
   }
 };
 
@@ -686,27 +824,41 @@ export const createBusiness = async (req, res) => {
       phone,
       description,
       services = [],
-      serviceAreas = []
+      serviceAreas = [],
     } = req.body;
 
     // Validate required fields
     if (!businessName || !email || !phone) {
-      return res.status(400).json({ message: 'Missing required fields: businessName, email, phone' });
+      return res
+        .status(400)
+        .json({
+          message: "Missing required fields: businessName, email, phone",
+        });
     }
 
     // Check if email already exists
-    const existingUser = await query('SELECT id FROM users WHERE email = $1', [email]);
+    const existingUser = await query("SELECT id FROM users WHERE email = $1", [
+      email,
+    ]);
     if (existingUser.rows.length > 0) {
-      return res.status(400).json({ message: 'Email already exists' });
+      return res.status(400).json({ message: "Email already exists" });
     }
 
     // Create user account
-    const passwordHash = bcrypt.hashSync('password123', 10);
+    const passwordHash = bcrypt.hashSync("password123", 10);
     const userResult = await query(
       `INSERT INTO users (email, password_hash, role, first_name, last_name, phone, is_approved)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING id`,
-      [email, passwordHash, 'provider', businessName.split(' ')[0], businessName.split(' ').slice(1).join(' ') || 'Provider', phone, true]
+      [
+        email,
+        passwordHash,
+        "provider",
+        businessName.split(" ")[0],
+        businessName.split(" ").slice(1).join(" ") || "Provider",
+        phone,
+        true,
+      ],
     );
 
     const userId = userResult.rows[0].id;
@@ -716,7 +868,7 @@ export const createBusiness = async (req, res) => {
       `INSERT INTO providers (user_id, business_name, business_description, is_verified)
        VALUES ($1, $2, $3, $4)
        RETURNING id, business_name, business_description`,
-      [userId, businessName, description || '', true]
+      [userId, businessName, description || "", true],
     );
 
     const provider = providerResult.rows[0];
@@ -726,12 +878,12 @@ export const createBusiness = async (req, res) => {
       try {
         await query(
           `INSERT INTO provider_services (provider_id, category_id) VALUES ($1, $2)`,
-          [provider.id, serviceId]
+          [provider.id, serviceId],
         );
       } catch (serviceError) {
         // Ignore duplicate service errors
-        if (!serviceError.message.includes('duplicate')) {
-          console.error('Error adding service:', serviceError.message);
+        if (!serviceError.message.includes("duplicate")) {
+          console.error("Error adding service:", serviceError.message);
         }
       }
     }
@@ -741,12 +893,12 @@ export const createBusiness = async (req, res) => {
       try {
         await query(
           `INSERT INTO provider_service_areas (provider_id, suburb) VALUES ($1, $2)`,
-          [provider.id, suburb]
+          [provider.id, suburb],
         );
       } catch (areaError) {
         // Ignore duplicate area errors
-        if (!areaError.message.includes('duplicate')) {
-          console.error('Error adding service area:', areaError.message);
+        if (!areaError.message.includes("duplicate")) {
+          console.error("Error adding service area:", areaError.message);
         }
       }
     }
@@ -755,22 +907,28 @@ export const createBusiness = async (req, res) => {
     await query(
       `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, new_values)
        VALUES ($1, $2, $3, $4, $5)`,
-      [req.user.id, 'create_business', 'provider', provider.id, JSON.stringify({ businessName, email })]
+      [
+        req.user.id,
+        "create_business",
+        "provider",
+        provider.id,
+        JSON.stringify({ businessName, email }),
+      ],
     );
 
     res.status(201).json({
-      message: 'Business created successfully',
+      message: "Business created successfully",
       provider: {
         id: provider.id,
         businessName: provider.business_name,
         description: provider.business_description,
         email,
-        phone
-      }
+        phone,
+      },
     });
   } catch (error) {
-    console.error('Create business error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Create business error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -780,37 +938,44 @@ export const createBusiness = async (req, res) => {
 export const editBusiness = async (req, res) => {
   try {
     const { id } = req.params;
-    const { businessName, description, services = [], serviceAreas = [] } = req.body;
+    const {
+      businessName,
+      description,
+      services = [],
+      serviceAreas = [],
+    } = req.body;
 
     // Update provider profile
     const result = await query(
       `UPDATE providers SET business_name = $1, business_description = $2, updated_at = CURRENT_TIMESTAMP
        WHERE id = $3
        RETURNING id, business_name, business_description`,
-      [businessName, description, id]
+      [businessName, description, id],
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ message: 'Business not found' });
+      return res.status(404).json({ message: "Business not found" });
     }
 
     const provider = result.rows[0];
 
     // Update services (remove old, add new) - use category_id
-    await query('DELETE FROM provider_services WHERE provider_id = $1', [id]);
+    await query("DELETE FROM provider_services WHERE provider_id = $1", [id]);
     for (const serviceId of services) {
       await query(
         `INSERT INTO provider_services (provider_id, category_id) VALUES ($1, $2)`,
-        [id, serviceId]
+        [id, serviceId],
       );
     }
 
     // Update service areas (remove old, add new)
-    await query('DELETE FROM provider_service_areas WHERE provider_id = $1', [id]);
+    await query("DELETE FROM provider_service_areas WHERE provider_id = $1", [
+      id,
+    ]);
     for (const suburb of serviceAreas) {
       await query(
         `INSERT INTO provider_service_areas (provider_id, suburb) VALUES ($1, $2)`,
-        [id, suburb]
+        [id, suburb],
       );
     }
 
@@ -818,20 +983,26 @@ export const editBusiness = async (req, res) => {
     await query(
       `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, new_values)
        VALUES ($1, $2, $3, $4, $5)`,
-      [req.user.id, 'update_business', 'provider', id, JSON.stringify({ businessName, description })]
+      [
+        req.user.id,
+        "update_business",
+        "provider",
+        id,
+        JSON.stringify({ businessName, description }),
+      ],
     );
 
     res.json({
-      message: 'Business updated successfully',
+      message: "Business updated successfully",
       provider: {
         id: provider.id,
         businessName: provider.business_name,
-        description: provider.business_description
-      }
+        description: provider.business_description,
+      },
     });
   } catch (error) {
-    console.error('Edit business error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Edit business error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -847,11 +1018,11 @@ export const getBusinessDetails = async (req, res) => {
        FROM providers p
        JOIN users u ON p.user_id = u.id
        WHERE p.id = $1`,
-      [id]
+      [id],
     );
 
     if (businessResult.rows.length === 0) {
-      return res.status(404).json({ message: 'Business not found' });
+      return res.status(404).json({ message: "Business not found" });
     }
 
     const business = businessResult.rows[0];
@@ -861,13 +1032,13 @@ export const getBusinessDetails = async (req, res) => {
       `SELECT sc.id, sc.name FROM service_categories sc
        JOIN provider_services ps ON sc.id = ps.category_id
        WHERE ps.provider_id = $1`,
-      [id]
+      [id],
     );
 
     // Get service areas (suburbs)
     const areasResult = await query(
       `SELECT id, suburb FROM provider_service_areas WHERE provider_id = $1`,
-      [id]
+      [id],
     );
 
     res.json({
@@ -879,12 +1050,12 @@ export const getBusinessDetails = async (req, res) => {
         phone: business.phone,
         description: business.business_description,
         services: servicesResult.rows,
-        serviceAreas: areasResult.rows
-      }
+        serviceAreas: areasResult.rows,
+      },
     });
   } catch (error) {
-    console.error('Get business details error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Get business details error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -894,13 +1065,13 @@ export const getBusinessDetails = async (req, res) => {
 export const getAllServices = async (req, res) => {
   try {
     const result = await query(
-      `SELECT id, name FROM service_categories WHERE is_active = true ORDER BY name`
+      `SELECT id, name FROM service_categories WHERE is_active = true ORDER BY name`,
     );
 
     res.json({ services: result.rows });
   } catch (error) {
-    console.error('Get all services error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Get all services error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 // ====================================================================
@@ -912,31 +1083,31 @@ export const deleteBusiness = async (req, res) => {
 
     // Soft delete the provider
     const result = await query(
-      'UPDATE providers SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *',
-      [id]
+      "UPDATE providers SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *",
+      [id],
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ message: 'Business not found' });
+      return res.status(404).json({ message: "Business not found" });
     }
 
     // Also soft delete the user account
     await query(
-      'UPDATE users SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1',
-      [result.rows[0].user_id]
+      "UPDATE users SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1",
+      [result.rows[0].user_id],
     );
 
     // Log activity
     await query(
       `INSERT INTO activity_logs (user_id, action, entity_type, entity_id)
        VALUES ($1, $2, $3, $4)`,
-      [req.user.id, 'delete_business', 'provider', id]
+      [req.user.id, "delete_business", "provider", id],
     );
 
-    res.json({ message: 'Business deleted successfully' });
+    res.json({ message: "Business deleted successfully" });
   } catch (error) {
-    console.error('Delete business error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Delete business error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -958,8 +1129,8 @@ export const getPendingDocuments = async (req, res) => {
 
     res.json({ documents: result.rows });
   } catch (error) {
-    console.error('Get pending documents error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Get pending documents error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -970,13 +1141,13 @@ export const getProviderDocuments = async (req, res) => {
 
     const result = await query(
       `SELECT * FROM provider_documents WHERE provider_id = $1 ORDER BY created_at DESC`,
-      [providerId]
+      [providerId],
     );
 
     res.json({ documents: result.rows });
   } catch (error) {
-    console.error('Get provider documents error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Get provider documents error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -994,11 +1165,11 @@ export const verifyProviderDocument = async (req, res) => {
         rejection_reason = $3
        WHERE id = $4
        RETURNING *`,
-      [isVerified, req.user.id, rejectionReason, documentId]
+      [isVerified, req.user.id, rejectionReason, documentId],
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ message: 'Document not found' });
+      return res.status(404).json({ message: "Document not found" });
     }
 
     // If all documents verified, mark provider as verified
@@ -1006,18 +1177,18 @@ export const verifyProviderDocument = async (req, res) => {
       const providerId = result.rows[0].provider_id;
       const unverifiedDocs = await query(
         `SELECT COUNT(*) FROM provider_documents WHERE provider_id = $1 AND is_verified = false`,
-        [providerId]
+        [providerId],
       );
 
       if (parseInt(unverifiedDocs.rows[0].count) === 0) {
         await query(
           `UPDATE providers SET is_verified = true, verification_date = CURRENT_TIMESTAMP WHERE id = $1`,
-          [providerId]
+          [providerId],
         );
 
         await query(
           `UPDATE users SET is_approved = true WHERE id = (SELECT user_id FROM providers WHERE id = $1)`,
-          [providerId]
+          [providerId],
         );
       }
     }
@@ -1026,13 +1197,22 @@ export const verifyProviderDocument = async (req, res) => {
     await query(
       `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, new_values)
        VALUES ($1, $2, $3, $4, $5)`,
-      [req.user.id, 'verify_document', 'provider_document', documentId, JSON.stringify({ is_verified: isVerified })]
+      [
+        req.user.id,
+        "verify_document",
+        "provider_document",
+        documentId,
+        JSON.stringify({ is_verified: isVerified }),
+      ],
     );
 
-    res.json({ message: 'Document verification updated', document: result.rows[0] });
+    res.json({
+      message: "Document verification updated",
+      document: result.rows[0],
+    });
   } catch (error) {
-    console.error('Verify document error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Verify document error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -1045,12 +1225,14 @@ export const uploadProviderDocument = async (req, res) => {
       `INSERT INTO provider_documents (provider_id, document_type, file_path)
        VALUES ($1, $2, $3)
        RETURNING *`,
-      [providerId, documentType, filePath]
+      [providerId, documentType, filePath],
     );
 
-    res.status(201).json({ message: 'Document uploaded', document: result.rows[0] });
+    res
+      .status(201)
+      .json({ message: "Document uploaded", document: result.rows[0] });
   } catch (error) {
-    console.error('Upload document error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Upload document error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };

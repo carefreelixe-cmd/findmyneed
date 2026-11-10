@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   FaArrowLeft,
@@ -11,6 +11,7 @@ import {
 } from "react-icons/fa6";
 import { useAuth } from "../../context/AuthContext";
 import { professionals } from "../../data/marketplace";
+import { api } from "../../lib/api";
 
 const fallback = {
   id: "trusted-pro",
@@ -24,7 +25,7 @@ const fallback = {
   initials: "TP",
   tags: ["Verified", "Service warranty"],
 };
-const offerings = [
+const fallbackOfferings = [
   [
     "Inspection & diagnosis",
     "A professional visit, issue assessment and clear estimate.",
@@ -49,15 +50,101 @@ export default function ProviderDetails() {
   const { id } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const provider = professionals.find((item) => item.id === id) || fallback;
-  const [selected, setSelected] = useState(offerings[1]);
+  const [details, setDetails] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [selected, setSelected] = useState(fallbackOfferings[1]);
   const [date, setDate] = useState("");
   const [time, setTime] = useState("10:00");
 
-  function book(event) {
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    api
+      .get(`/api/customer/providers/${id}`)
+      .then((response) => {
+        if (!active) return;
+        setDetails(response.data);
+        if (response.data.services?.length) {
+          const firstService = response.data.services[0];
+          setSelected([
+            firstService.name,
+            firstService.description || "Professional service with an upfront estimate.",
+            Number(firstService.price || 0),
+            firstService.duration
+              ? `${firstService.duration} min`
+              : "Duration confirmed after review",
+            firstService.id,
+          ]);
+        }
+      })
+      .catch(() => setError("This professional could not be loaded. Please return to search."))
+      .finally(() => active && setLoading(false));
+    return () => {
+      active = false;
+    };
+  }, [id]);
+
+  const provider = details
+    ? {
+        id: details.provider.id,
+        name: details.provider.business_name,
+        category: details.services?.[0]?.category_name || "Local service professional",
+        city: details.provider.city || "Your city",
+        area: details.provider.suburb || details.provider.city || "Local area",
+        rating: details.provider.rating || "New",
+        reviews: details.provider.total_reviews || 0,
+        initials: details.provider.business_name
+          .split(" ")
+          .slice(0, 2)
+          .map((word) => word[0])
+          .join("")
+          .toUpperCase(),
+        tags: ["Verified", ...(details.provider.specialties || []).slice(0, 3)],
+      }
+    : professionals.find((item) => item.id === id) || fallback;
+  const offerings = details?.services?.length
+    ? details.services.map((item) => [
+        item.name,
+        item.description || "Professional service with an upfront estimate.",
+        Number(item.price || 0),
+        item.duration ? `${item.duration} min` : "Duration confirmed after review",
+        item.id,
+      ])
+    : fallbackOfferings;
+
+  async function book(event) {
     event.preventDefault();
     if (!user) return navigate("/login");
-    navigate("/customer", { state: { bookingCreated: true } });
+    if (user.role !== "customer") {
+      setError("Please use a customer account to make a booking.");
+      return;
+    }
+    if (!details || !selected[4]) {
+      setError("This service is not currently available for online booking.");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      setError("");
+      await api.post("/api/customer/bookings", {
+        providerId: details.provider.id,
+        serviceId: selected[4],
+        bookingDate: date,
+        bookingTime: time,
+        customerName: `${user.firstName} ${user.lastName}`,
+        customerEmail: user.email,
+        customerPhone: user.phone || "Not provided",
+        totalPrice: selected[2],
+      });
+      navigate("/customer", { state: { bookingCreated: true } });
+    } catch (requestError) {
+      setError(requestError.response?.data?.message || "Booking could not be created.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -73,6 +160,12 @@ export default function ProviderDetails() {
         </div>
       </header>
       <main className="mx-auto max-w-7xl px-5 py-10 lg:px-8">
+        {loading && <div className="mb-6 h-36 animate-pulse rounded-[32px] bg-white" />}
+        {error && (
+          <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 font-bold text-red-800">
+            {error}
+          </div>
+        )}
         <section className="grid gap-7 lg:grid-cols-[1fr_360px]">
           <div className="space-y-6">
             <article className="rounded-[36px] bg-[#173c2b] p-8 text-white md:p-10">
@@ -160,10 +253,16 @@ export default function ProviderDetails() {
                 Recent customer reviews
               </p>
               <div className="mt-5 grid gap-4 md:grid-cols-2">
-                {[
-                  ["Ananya R.", "Professional, punctual and explained every step clearly."],
-                  ["Rohan M.", "Good communication, clean work and no surprise charges."],
-                ].map(([name, text]) => (
+                {(details?.reviews?.length
+                  ? details.reviews.map((review) => [
+                      `${review.first_name} ${review.last_name?.[0] || ""}.`,
+                      review.comment,
+                    ])
+                  : [
+                      ["Ananya R.", "Professional, punctual and explained every step clearly."],
+                      ["Rohan M.", "Good communication, clean work and no surprise charges."],
+                    ]
+                ).map(([name, text]) => (
                   <blockquote key={name} className="rounded-2xl bg-white p-5">
                     <div className="text-[#e85d3f]">★★★★★</div>
                     <p className="mt-3 font-bold leading-7">“{text}”</p>
@@ -214,8 +313,11 @@ export default function ProviderDetails() {
                 <option>16:00</option>
               </select>
             </label>
-            <button className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-[#e85d3f] p-4 font-black text-white">
-              <FaCalendarCheck /> Continue to booking
+            <button
+              disabled={submitting || loading}
+              className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-[#e85d3f] p-4 font-black text-white disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <FaCalendarCheck /> {submitting ? "Creating booking…" : "Confirm booking"}
             </button>
             <p className="mt-4 text-center text-xs text-black/40">
               Secure checkout · Booking protection included

@@ -19,7 +19,7 @@ function DashboardHome() {
 
   const fetchBookings = async () => {
     try {
-      const response = await axios.get("http://localhost:5000/api/customer/bookings");
+      const response = await axios.get("/api/customer/bookings");
       setBookings(response.data);
 
       const pending = response.data.filter((b) => b.status === "pending").length;
@@ -38,12 +38,12 @@ function DashboardHome() {
     if (!confirm("Are you sure you want to cancel this booking?")) return;
 
     try {
-      await axios.patch(`http://localhost:5000/api/customer/bookings/${id}/cancel`, {
+      await axios.patch(`/api/customer/bookings/${id}/cancel`, {
         reason: "Customer cancelled",
       });
       fetchBookings();
       alert("Booking cancelled successfully");
-    } catch (error) {
+    } catch (_error) {
       alert("Error cancelling booking");
     }
   };
@@ -57,7 +57,7 @@ function DashboardHome() {
 
     setLoadingReview(true);
     try {
-      await axios.post("http://localhost:5000/api/customer/reviews", {
+      await axios.post("/api/customer/reviews", {
         bookingId: selectedBooking.id,
         rating: reviewData.rating,
         comment: reviewData.comment,

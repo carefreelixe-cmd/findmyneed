@@ -29,8 +29,18 @@
 }
 
 @layer base {
-  * {
-    @apply transition-all duration-200;
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  a,
+  button,
+  input,
+  select,
+  textarea {
+    @apply transition-colors duration-200;
   }
 
   body {
@@ -56,14 +66,6 @@
   select,
   textarea {
     font: inherit;
-  }
-
-  p,
-  span,
-  div,
-  a,
-  li {
-    color: #2c3e50;
   }
 
   h1 {

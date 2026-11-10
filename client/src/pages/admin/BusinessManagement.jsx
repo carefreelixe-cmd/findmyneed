@@ -35,7 +35,7 @@ const BusinessManagement = () => {
   const fetchBusinesses = async () => {
     try {
       setLoading(true);
-      const response = await axios.get("http://localhost:5000/api/admin/providers");
+      const response = await axios.get("/api/admin/providers");
       // Handle both array and object responses
       const data = Array.isArray(response.data) ? response.data : response.data.providers || [];
       setBusinesses(data);
@@ -49,7 +49,7 @@ const BusinessManagement = () => {
 
   const fetchServices = async () => {
     try {
-      const response = await axios.get("http://localhost:5000/api/admin/services");
+      const response = await axios.get("/api/admin/services");
       setServices(response.data.services || response.data);
     } catch (error) {
       console.error("Error fetching services:", error);
@@ -92,14 +92,11 @@ const BusinessManagement = () => {
       console.log("Submitting business data:", submitData);
 
       if (editingId) {
-        const response = await axios.put(
-          `http://localhost:5000/api/admin/businesses/${editingId}`,
-          submitData,
-        );
+        const response = await axios.put(`/api/admin/businesses/${editingId}`, submitData);
         console.log("Update response:", response);
         alert("Business updated successfully");
       } else {
-        const response = await axios.post("http://localhost:5000/api/admin/businesses", submitData);
+        const response = await axios.post("/api/admin/businesses", submitData);
         console.log("Create response:", response);
         alert("Business created successfully");
       }
@@ -118,7 +115,7 @@ const BusinessManagement = () => {
   const handleEditBusiness = async (businessId) => {
     try {
       console.log("Fetching business details for:", businessId);
-      const response = await axios.get(`http://localhost:5000/api/admin/businesses/${businessId}`);
+      const response = await axios.get(`/api/admin/businesses/${businessId}`);
       console.log("Business details response:", response.data);
 
       // Handle nested business object
@@ -196,10 +193,9 @@ const BusinessManagement = () => {
         }
 
         setImportProgress({ total: data.length, processed: 0, failed: [] });
-        const response = await axios.post(
-          "http://localhost:5000/api/admin/businesses/bulk-import",
-          { businesses: data },
-        );
+        const response = await axios.post("/api/admin/businesses/bulk-import", {
+          businesses: data,
+        });
 
         setImportProgress({
           total: data.length,
@@ -227,9 +223,7 @@ const BusinessManagement = () => {
       try {
         setLoading(true);
         console.log("Deleting business:", businessId);
-        const response = await axios.delete(
-          `http://localhost:5000/api/admin/businesses/${businessId}`,
-        );
+        const response = await axios.delete(`/api/admin/businesses/${businessId}`);
         console.log("Delete response:", response);
         alert("Business deleted successfully");
         setLoading(false);

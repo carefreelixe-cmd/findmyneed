@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   FaArrowLeft,
@@ -9,9 +9,14 @@ import {
   FaSliders,
   FaStar,
 } from "react-icons/fa6";
-import { cities, professionals, services } from "../../data/marketplace";
+import {
+  cities as fallbackCities,
+  professionals,
+  services as fallbackServices,
+} from "../../data/marketplace";
+import { api } from "../../lib/api";
 
-const extendedProviders = [
+const fallbackProviders = [
   ...professionals,
   {
     id: "spark-pro",
@@ -102,29 +107,93 @@ export default function SearchProviders() {
   const [sort, setSort] = useState("recommended");
   const [detailOne, setDetailOne] = useState("");
   const [detailTwo, setDetailTwo] = useState("");
-  const activeCriteria = criteria[service] || defaultCriteria;
+  const [results, setResults] = useState(fallbackProviders);
+  const [categoryOptions, setCategoryOptions] = useState([]);
+  const [locationOptions, setLocationOptions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const services = categoryOptions.length
+    ? categoryOptions.map((item) => ({ id: item.slug, name: item.name, filters: item.filters }))
+    : fallbackServices;
+  const cities = locationOptions.length ? locationOptions.map((item) => item.city) : fallbackCities;
+  const selectedService = services.find((item) => item.id === service);
+  const apiCriteria = selectedService?.filters
+    ?.sort((a, b) => a.displayOrder - b.displayOrder)
+    .slice(0, 2)
+    .map((item) => [item.label, item.options]);
+  const activeCriteria =
+    apiCriteria?.length === 2 ? apiCriteria : criteria[service] || defaultCriteria;
 
-  const results = useMemo(() => {
-    const serviceName = services.find((item) => item.id === service)?.name.toLowerCase();
-    return extendedProviders
-      .filter((item) => {
-        const text = `${item.name} ${item.category} ${item.area}`.toLowerCase();
-        return (
-          (!query || text.includes(query.toLowerCase())) &&
-          (!city || item.city === city) &&
-          (!serviceName || text.includes(serviceName.split(" ")[0])) &&
-          item.rating >= Number(rating) &&
-          item.price <= Number(price)
-        );
+  useEffect(() => {
+    Promise.all([api.get("/api/marketplace/categories"), api.get("/api/marketplace/locations")])
+      .then(([categoryResponse, locationResponse]) => {
+        setCategoryOptions(categoryResponse.data);
+        setLocationOptions(locationResponse.data);
       })
-      .sort((a, b) =>
-        sort === "rating"
-          ? b.rating - a.rating
-          : sort === "price"
-            ? a.price - b.price
-            : b.reviews - a.reviews,
-      );
-  }, [city, price, query, rating, service, sort]);
+      .catch(() => setError("Some filters could not be loaded. Search is still available."));
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      try {
+        setLoading(true);
+        setError("");
+        const response = await api.get("/api/marketplace/search", {
+          signal: controller.signal,
+          params: {
+            q: query || undefined,
+            category: service || undefined,
+            city: city || undefined,
+            minRating: rating === "0" ? undefined : rating,
+            maxPrice: price,
+            serviceMode:
+              mode === "At home"
+                ? "at_customer"
+                : mode === "At workshop"
+                  ? "at_provider"
+                  : mode === "Pickup & drop"
+                    ? "pickup_drop"
+                    : undefined,
+            sort,
+          },
+        });
+        setResults(
+          response.data.results.map((item) => ({
+            id: item.provider_id,
+            serviceId: item.service_id,
+            name: item.business_name,
+            category: item.service_name || item.category_name,
+            city: item.city,
+            area: item.suburb || item.city,
+            rating: Number(item.rating || 0),
+            reviews: item.total_reviews || 0,
+            price: Number(item.price || 0),
+            initials: item.business_name
+              .split(" ")
+              .slice(0, 2)
+              .map((word) => word[0])
+              .join("")
+              .toUpperCase(),
+            tags: [
+              item.is_verified ? "Verified" : "Professional",
+              item.service_mode?.replaceAll("_", " "),
+            ].filter(Boolean),
+          })),
+        );
+      } catch (requestError) {
+        if (requestError.code !== "ERR_CANCELED") {
+          setError("We could not refresh results. Please check that the API is running.");
+        }
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    }, 300);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [city, mode, price, query, rating, service, sort]);
 
   function clear() {
     setQuery("");
@@ -286,10 +355,17 @@ export default function SearchProviders() {
           </div>
         </aside>
         <section>
+          {error && (
+            <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-900">
+              {error}
+            </div>
+          )}
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
             <div>
-              <p className="text-sm font-bold text-black/45">
-                {results.length} verified professionals
+              <p className="text-sm font-bold text-black/45" aria-live="polite">
+                {loading
+                  ? "Finding available professionals…"
+                  : `${results.length} matching services`}
               </p>
               <h2 className="mt-1 text-3xl font-black">Recommended for you</h2>
             </div>
@@ -304,53 +380,58 @@ export default function SearchProviders() {
             </select>
           </div>
           <div className="mt-6 space-y-4">
-            {results.map((item) => (
-              <article
-                key={item.id}
-                className="grid gap-5 rounded-[28px] bg-white p-6 shadow-sm md:grid-cols-[auto_1fr_auto] md:items-center"
-              >
-                <span className="grid h-20 w-20 place-items-center rounded-2xl bg-[#d9f99d] text-2xl font-black">
-                  {item.initials}
-                </span>
-                <div>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <h3 className="text-xl font-black">{item.name}</h3>
-                    <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-black text-green-700">
-                      <FaCheck className="mr-1 inline" /> Verified
-                    </span>
-                  </div>
-                  <p className="mt-2 text-sm text-black/50">
-                    {item.category} · <FaLocationDot className="inline text-[#e85d3f]" />{" "}
-                    {item.area}, {item.city}
-                  </p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {item.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="rounded-full bg-[#f3f2e9] px-3 py-1 text-xs font-bold"
-                      >
-                        {tag}
+            {loading &&
+              Array.from({ length: 3 }).map((_, index) => (
+                <div key={index} className="h-44 animate-pulse rounded-[28px] bg-white/70" />
+              ))}
+            {!loading &&
+              results.map((item) => (
+                <article
+                  key={item.id}
+                  className="grid gap-5 rounded-[28px] bg-white p-6 shadow-sm md:grid-cols-[auto_1fr_auto] md:items-center"
+                >
+                  <span className="grid h-20 w-20 place-items-center rounded-2xl bg-[#d9f99d] text-2xl font-black">
+                    {item.initials}
+                  </span>
+                  <div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <h3 className="text-xl font-black">{item.name}</h3>
+                      <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-black text-green-700">
+                        <FaCheck className="mr-1 inline" /> Verified
                       </span>
-                    ))}
+                    </div>
+                    <p className="mt-2 text-sm text-black/50">
+                      {item.category} · <FaLocationDot className="inline text-[#e85d3f]" />{" "}
+                      {item.area}, {item.city}
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {item.tags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="rounded-full bg-[#f3f2e9] px-3 py-1 text-xs font-bold"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                </div>
-                <div className="border-t border-black/10 pt-4 md:border-l md:border-t-0 md:pl-6 md:pt-0">
-                  <p className="text-sm font-black text-[#e85d3f]">
-                    <FaStar className="mr-1 inline" /> {item.rating}{" "}
-                    <span className="font-medium text-black/40">({item.reviews})</span>
-                  </p>
-                  <p className="mt-3 text-xs text-black/40">Visit price from</p>
-                  <p className="text-xl font-black">₹{item.price}</p>
-                  <Link
-                    to={`/providers/${item.id}`}
-                    className="mt-4 block rounded-xl bg-[#173c2b] px-5 py-3 text-center text-sm font-black text-white"
-                  >
-                    View profile
-                  </Link>
-                </div>
-              </article>
-            ))}
-            {!results.length && (
+                  <div className="border-t border-black/10 pt-4 md:border-l md:border-t-0 md:pl-6 md:pt-0">
+                    <p className="text-sm font-black text-[#e85d3f]">
+                      <FaStar className="mr-1 inline" /> {item.rating}{" "}
+                      <span className="font-medium text-black/40">({item.reviews})</span>
+                    </p>
+                    <p className="mt-3 text-xs text-black/40">Visit price from</p>
+                    <p className="text-xl font-black">₹{item.price}</p>
+                    <Link
+                      to={`/providers/${item.id}`}
+                      className="mt-4 block rounded-xl bg-[#173c2b] px-5 py-3 text-center text-sm font-black text-white"
+                    >
+                      View profile
+                    </Link>
+                  </div>
+                </article>
+              ))}
+            {!loading && !results.length && (
               <div className="rounded-[28px] bg-white p-12 text-center">
                 <FaFilter className="mx-auto text-4xl text-black/20" />
                 <h3 className="mt-5 text-xl font-black">No exact matches</h3>

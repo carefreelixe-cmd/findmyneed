@@ -22,7 +22,7 @@ export default function BannersManager() {
   const fetchBanners = async () => {
     try {
       setLoading(true);
-      const response = await axios.get("http://localhost:5000/api/admin/features/banners");
+      const response = await axios.get("/api/admin/features/banners");
       setBanners(response.data);
     } catch (error) {
       console.error("Error fetching banners:", error);
@@ -44,9 +44,9 @@ export default function BannersManager() {
     e.preventDefault();
     try {
       if (editingId) {
-        await axios.put(`http://localhost:5000/api/admin/features/banners/${editingId}`, formData);
+        await axios.put(`/api/admin/features/banners/${editingId}`, formData);
       } else {
-        await axios.post("http://localhost:5000/api/admin/features/banners", formData);
+        await axios.post("/api/admin/features/banners", formData);
       }
       alert(editingId ? "Banner updated!" : "Banner created!");
       setShowForm(false);
@@ -74,7 +74,7 @@ export default function BannersManager() {
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure?")) {
       try {
-        await axios.delete(`http://localhost:5000/api/admin/features/banners/${id}`);
+        await axios.delete(`/api/admin/features/banners/${id}`);
         alert("Banner deleted!");
         fetchBanners();
       } catch (error) {

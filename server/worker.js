@@ -7,6 +7,10 @@ import {
 } from "./services/searchService.js";
 import { withTransaction } from "./config/database.js";
 import { enqueue } from "./queues/queues.js";
+import {
+  closeEmailTransport,
+  sendNotificationEmail,
+} from "./services/emailService.js";
 
 if (!redisEnabled) {
   console.error("REDIS_URL is required to run the BullMQ worker");
@@ -18,9 +22,7 @@ const worker = new Worker(
   async (job) => {
     switch (job.name) {
       case "notification.send":
-        // Connect the chosen email/SMS provider here. The job remains retryable.
-        console.log("Notification queued:", job.data.notificationId);
-        return { delivered: true };
+        return sendNotificationEmail(job.data);
       case "search.index-service":
         await indexService(job.data.service);
         return { indexed: true };
@@ -99,6 +101,7 @@ const outboxTimer = setInterval(
 
 const shutdown = async () => {
   clearInterval(outboxTimer);
+  await closeEmailTransport();
   await worker.close();
   await closeRedis();
   process.exit(0);

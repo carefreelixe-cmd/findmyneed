@@ -21,7 +21,7 @@ function FAQsManager() {
 
   const fetchFAQs = async () => {
     try {
-      const response = await axios.get("http://localhost:5000/api/admin/features/faqs");
+      const response = await axios.get("/api/admin/features/faqs");
       setFaqs(response.data);
     } catch (error) {
       console.error("Error fetching FAQs:", error);
@@ -49,10 +49,10 @@ function FAQsManager() {
 
     try {
       if (editingId) {
-        await axios.put(`http://localhost:5000/api/admin/features/faqs/${editingId}`, formData);
+        await axios.put(`/api/admin/features/faqs/${editingId}`, formData);
         alert("FAQ updated successfully");
       } else {
-        await axios.post("http://localhost:5000/api/admin/features/faqs", formData);
+        await axios.post("/api/admin/features/faqs", formData);
         alert("FAQ created successfully");
       }
 
@@ -87,7 +87,7 @@ function FAQsManager() {
   const handleDelete = async (id) => {
     if (confirm("Are you sure you want to delete this FAQ?")) {
       try {
-        await axios.delete(`http://localhost:5000/api/admin/features/faqs/${id}`);
+        await axios.delete(`/api/admin/features/faqs/${id}`);
         alert("FAQ deleted successfully");
         fetchFAQs();
       } catch (error) {

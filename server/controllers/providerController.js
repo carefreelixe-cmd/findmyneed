@@ -1,4 +1,4 @@
-import { query } from "../config/database.js";
+import { query, withTransaction } from "../config/database.js";
 import { enqueue } from "../queues/queues.js";
 
 // Get Provider Profile
@@ -422,50 +422,69 @@ export const updateBookingStatus = async (req, res) => {
       });
     }
 
-    // Get booking first to get customer_id
-    const bookingResult = await query(
-      `SELECT customer_id FROM bookings WHERE id = $1 AND provider_id = (SELECT id FROM providers WHERE user_id = $2)`,
-      [id, req.user.id],
-    );
+    const booking = await withTransaction(async (client) => {
+      const bookingResult = await client.query(
+        `SELECT b.customer_id, p.business_name
+         FROM bookings b
+         JOIN providers p ON p.id = b.provider_id
+         WHERE b.id = $1 AND b.provider_id =
+           (SELECT id FROM providers WHERE user_id = $2)
+         FOR UPDATE OF b`,
+        [id, req.user.id],
+      );
 
-    if (bookingResult.rows.length === 0) {
-      return res.status(404).json({ message: "Booking not found" });
-    }
+      if (bookingResult.rowCount === 0) {
+        const error = new Error("Booking not found");
+        error.statusCode = 404;
+        throw error;
+      }
 
-    const customerId = bookingResult.rows[0].customer_id;
-
-    // Update booking status
-    const result = await query(
-      `UPDATE bookings SET status = $1, completed_at = CASE WHEN $1::varchar = 'completed' THEN CURRENT_TIMESTAMP ELSE completed_at END, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $2
-       RETURNING *`,
-      [status, id],
-    );
-
-    // Create notification for customer
-    try {
-      await query(
+      const result = await client.query(
+        `UPDATE bookings SET status = $1,
+           completed_at = CASE WHEN $1::varchar = 'completed' THEN CURRENT_TIMESTAMP ELSE completed_at END,
+           updated_at = CURRENT_TIMESTAMP
+         WHERE id = $2 RETURNING *`,
+        [status, id],
+      );
+      const notification = await client.query(
         `INSERT INTO notifications (user_id, type, subject, message)
-         VALUES ($1, $2, $3, $4)`,
+         VALUES ($1, 'in_app', 'Booking Status Updated', $2)
+         RETURNING id`,
         [
-          customerId,
-          "booking_status",
-          "Booking Status Updated",
+          bookingResult.rows[0].customer_id,
           `Your booking status has been updated to: ${status}`,
         ],
       );
-    } catch (notifError) {
-      console.error("Error creating notification:", notifError);
-      // Don't fail the whole operation if notification fails
-    }
+      await client.query(
+        `INSERT INTO outbox_events (topic, aggregate_type, aggregate_id, payload)
+         VALUES ('notification.send', 'booking', $1, $2)`,
+        [
+          id,
+          {
+            notificationId: notification.rows[0].id,
+            templateKey:
+              status === "confirmed" ? "booking_confirmed" : "booking_status",
+            data: {
+              status: status.replaceAll("_", " "),
+              providerName: bookingResult.rows[0].business_name,
+              bookingDate: result.rows[0].booking_date,
+              dashboardUrl: `${process.env.FRONTEND_URL || "http://localhost:5173"}/customer`,
+            },
+          },
+        ],
+      );
+      return result.rows[0];
+    });
 
     res.json({
       message: "Booking status updated successfully",
-      booking: result.rows[0],
+      booking,
     });
   } catch (error) {
     console.error("Update booking status error:", error);
-    res.status(500).json({ message: "Server error: " + error.message });
+    res.status(error.statusCode || 500).json({
+      message: error.statusCode ? error.message : "Server error",
+    });
   }
 };
 

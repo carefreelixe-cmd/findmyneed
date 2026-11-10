@@ -221,6 +221,12 @@ export const createBooking = async (req, res) => {
           {
             notificationId: notificationResult.rows[0].id,
             bookingId: bookingResult.rows[0].id,
+            templateKey: "booking_requested",
+            data: {
+              customerName,
+              bookingDate,
+              dashboardUrl: `${process.env.FRONTEND_URL || "http://localhost:5173"}/provider`,
+            },
           },
         ],
       );

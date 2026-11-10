@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   FaArrowRight,
@@ -15,7 +15,13 @@ import {
   FaXmark,
 } from "react-icons/fa6";
 import { useAuth } from "../context/AuthContext";
-import { cities, professionals, reviews, services } from "../data/marketplace";
+import {
+  cities as fallbackCities,
+  professionals as fallbackProfessionals,
+  reviews as fallbackReviews,
+  services as fallbackServices,
+} from "../data/marketplace";
+import { api } from "../lib/api";
 
 export default function Home() {
   const { user } = useAuth();
@@ -23,6 +29,67 @@ export default function Home() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [service, setService] = useState("");
   const [city, setCity] = useState("Bengaluru");
+  const [content, setContent] = useState(null);
+  const [locations, setLocations] = useState([]);
+
+  useEffect(() => {
+    let active = true;
+    Promise.all([api.get("/api/marketplace/home"), api.get("/api/marketplace/locations")])
+      .then(([homeResponse, locationResponse]) => {
+        if (!active) return;
+        setContent(homeResponse.data);
+        setLocations(locationResponse.data);
+      })
+      .catch((error) => console.error("Unable to load marketplace content:", error));
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const services = content?.categories?.length
+    ? content.categories.map((item) => ({
+        ...item,
+        id: item.slug,
+        category: "Local service",
+        price: 499,
+        icon:
+          fallbackServices.find((serviceItem) =>
+            item.name.toLowerCase().includes(serviceItem.name.split(" ")[0].toLowerCase()),
+          )?.icon || FaBriefcase,
+      }))
+    : fallbackServices;
+  const cities = locations.length ? locations.map((item) => item.city) : fallbackCities;
+  const professionals = content?.featuredProviders?.length
+    ? content.featuredProviders.map((item) => ({
+        id: item.id,
+        name: item.business_name,
+        category: "Verified professional",
+        city: item.city,
+        area: item.suburb || item.city,
+        rating: item.rating || "New",
+        reviews: item.total_reviews || 0,
+        price: 499,
+        initials: item.business_name
+          .split(" ")
+          .slice(0, 2)
+          .map((word) => word[0])
+          .join("")
+          .toUpperCase(),
+        tags: ["Verified", "Local professional"],
+      }))
+    : fallbackProfessionals;
+  const reviews = content?.reviews?.length
+    ? content.reviews.map((item) => [
+        `${item.first_name} ${item.last_name?.[0] || ""}.`,
+        item.business_name,
+        item.comment,
+      ])
+    : fallbackReviews;
+  const stats = [
+    [content?.stats?.bookings?.toLocaleString?.() || "25,000+", "jobs completed"],
+    ["4.8 / 5", "average rating"],
+    [content?.stats?.providers?.toLocaleString?.() || "1,200+", "verified professionals"],
+  ];
 
   function submit(event) {
     event.preventDefault();
@@ -183,11 +250,7 @@ export default function Home() {
 
         <section className="border-b border-black/10 bg-white">
           <div className="mx-auto grid max-w-7xl gap-6 px-5 py-7 text-center sm:grid-cols-3 lg:px-8">
-            {[
-              ["25,000+", "jobs completed"],
-              ["4.8 / 5", "average rating"],
-              ["1,200+", "verified professionals"],
-            ].map(([value, label]) => (
+            {stats.map(([value, label]) => (
               <div key={label}>
                 <b className="text-2xl">{value}</b>
                 <p className="mt-1 text-xs font-black uppercase tracking-wider text-black/45">

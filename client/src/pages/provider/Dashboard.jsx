@@ -32,8 +32,8 @@ function DashboardHome() {
     try {
       setLoading(true);
       const [bookingsRes, reviewsRes] = await Promise.all([
-        axios.get("http://localhost:5000/api/provider/bookings"),
-        axios.get("http://localhost:5000/api/provider/reviews"),
+        axios.get("/api/provider/bookings"),
+        axios.get("/api/provider/reviews"),
       ]);
 
       const bookings = bookingsRes.data;
@@ -278,7 +278,7 @@ function Profile() {
   const fetchProfile = async () => {
     try {
       setLoading(true);
-      const response = await axios.get("http://localhost:5000/api/provider/profile");
+      const response = await axios.get("/api/provider/profile");
       setProfile(response.data);
 
       // Handle specialties - convert array to comma-separated string if needed
@@ -320,7 +320,7 @@ function Profile() {
     e.preventDefault();
     try {
       setSaving(true);
-      await axios.patch("http://localhost:5000/api/provider/profile", formData);
+      await axios.patch("/api/provider/profile", formData);
       alert("Profile updated successfully!");
       setIsEditing(false);
       fetchProfile();
@@ -584,7 +584,7 @@ function Services() {
 
   const fetchServices = async () => {
     try {
-      const response = await axios.get("http://localhost:5000/api/provider/services");
+      const response = await axios.get("/api/provider/services");
       setServices(response.data);
     } catch (error) {
       console.error("Error fetching services:", error);
@@ -596,7 +596,7 @@ function Services() {
 
   const fetchCategories = async () => {
     try {
-      const response = await axios.get("http://localhost:5000/api/customer/categories");
+      const response = await axios.get("/api/customer/categories");
       console.log("Categories loaded:", response.data);
       setCategories(response.data);
     } catch (error) {
@@ -644,14 +644,11 @@ function Services() {
       console.log("Submitting form data:", formData);
 
       if (editingId) {
-        const response = await axios.patch(
-          `http://localhost:5000/api/provider/services/${editingId}`,
-          formData,
-        );
+        const response = await axios.patch(`/api/provider/services/${editingId}`, formData);
         console.log("Service updated:", response.data);
         alert("Service updated successfully!");
       } else {
-        const response = await axios.post("http://localhost:5000/api/provider/services", formData);
+        const response = await axios.post("/api/provider/services", formData);
         console.log("Service created:", response.data);
         alert("Service created successfully!");
       }
@@ -681,7 +678,7 @@ function Services() {
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this service?")) return;
     try {
-      await axios.delete(`http://localhost:5000/api/provider/services/${id}`);
+      await axios.delete(`/api/provider/services/${id}`);
       alert("Service deleted successfully!");
       fetchServices();
     } catch (error) {
@@ -889,8 +886,8 @@ function Bookings() {
       setLoading(true);
       const url =
         filterStatus === "all"
-          ? "http://localhost:5000/api/provider/bookings"
-          : `http://localhost:5000/api/provider/bookings?status=${filterStatus}`;
+          ? "/api/provider/bookings"
+          : `/api/provider/bookings?status=${filterStatus}`;
       const response = await axios.get(url);
       setBookings(response.data);
     } catch (error) {
@@ -903,7 +900,7 @@ function Bookings() {
 
   const handleStatusUpdate = async (id, newStatus) => {
     try {
-      await axios.patch(`http://localhost:5000/api/provider/bookings/${id}/status`, {
+      await axios.patch(`/api/provider/bookings/${id}/status`, {
         status: newStatus,
       });
       alert("Booking status updated!");
@@ -1075,7 +1072,7 @@ function Reviews() {
   const fetchReviews = async () => {
     try {
       setLoading(true);
-      const response = await axios.get("http://localhost:5000/api/provider/reviews");
+      const response = await axios.get("/api/provider/reviews");
       setReviews(response.data);
     } catch (error) {
       console.error("Error fetching reviews:", error);
@@ -1093,7 +1090,7 @@ function Reviews() {
     }
 
     try {
-      await axios.post(`http://localhost:5000/api/provider/reviews/${reviewId}/respond`, {
+      await axios.post(`/api/provider/reviews/${reviewId}/respond`, {
         response,
       });
       alert("Response added!");

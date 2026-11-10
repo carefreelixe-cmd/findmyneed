@@ -96,3 +96,30 @@ the worker perform the external operation afterward.
   origins explicit.
 - Run `npm audit --omit=dev` in CI and block releases with known production
   vulnerabilities.
+
+## 7. Transactional email
+
+Email is delivered by the BullMQ worker rather than API requests. Configure SMTP
+in `.env`, then enable delivery only after testing:
+
+```dotenv
+EMAIL_HOST=smtp.example.com
+EMAIL_PORT=587
+EMAIL_USER=your-smtp-user
+EMAIL_PASSWORD=your-smtp-password
+EMAIL_FROM=FindMyNeed <noreply@example.com>
+EMAIL_SECURE=false
+EMAIL_DELIVERY_ENABLED=true
+EMAIL_MAX_CONNECTIONS=5
+EMAIL_MAX_MESSAGES=100
+```
+
+When `EMAIL_DELIVERY_ENABLED=false`, workers render and log a safe preview event
+without contacting SMTP. Templates currently cover welcome, provider application,
+booking request, booking confirmation, booking status, password reset, provider
+approval and general notifications. Add templates in `services/emailTemplates.js`
+and enqueue `notification.send` with `notificationId`, `templateKey` and `data`.
+
+Set up SPF, DKIM and DMARC before sending from a production domain. Keep marketing
+email separate from transactional email and implement unsubscribe preferences for
+marketing messages.
