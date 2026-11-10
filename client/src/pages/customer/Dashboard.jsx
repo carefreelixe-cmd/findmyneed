@@ -43,7 +43,7 @@ function DashboardHome() {
       });
       fetchBookings();
       alert("Booking cancelled successfully");
-    } catch (_error) {
+    } catch {
       alert("Error cancelling booking");
     }
   };

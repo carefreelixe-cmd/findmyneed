@@ -244,7 +244,7 @@ function Providers() {
       await axios.patch(`/api/admin/providers/${id}/status`, { isApproved });
       fetchProviders();
       alert(`Provider ${isApproved ? "approved" : "rejected"} successfully`);
-    } catch (_error) {
+    } catch {
       alert("Error updating provider status");
     }
   };
@@ -256,7 +256,7 @@ function Providers() {
       });
       fetchProviders();
       alert(`Provider ${!isActive ? "activated" : "deactivated"} successfully`);
-    } catch (_error) {
+    } catch {
       alert("Error updating provider status");
     }
   };
@@ -548,7 +548,7 @@ function Categories() {
       setShowForm(false);
       fetchCategories();
       alert("Category added successfully");
-    } catch (_error) {
+    } catch {
       alert("Error adding category");
     }
   };
@@ -559,7 +559,7 @@ function Categories() {
         await axios.delete(`/api/admin/categories/${id}`);
         fetchCategories();
         alert("Category deleted successfully");
-      } catch (_error) {
+      } catch {
         alert("Error deleting category");
       }
     }
@@ -673,7 +673,7 @@ function Customers() {
       });
       fetchCustomers();
       alert(`Customer ${!isActive ? "activated" : "deactivated"} successfully`);
-    } catch (_error) {
+    } catch {
       alert("Error updating customer status");
     }
   };
@@ -777,7 +777,7 @@ function Reviews() {
         await axios.delete(`/api/admin/reviews/${id}`);
         fetchReviews();
         alert("Review deleted successfully");
-      } catch (_error) {
+      } catch {
         alert("Error deleting review");
       }
     }

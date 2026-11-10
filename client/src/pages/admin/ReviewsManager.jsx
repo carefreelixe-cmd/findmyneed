@@ -15,7 +15,7 @@ const ReviewsManager = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
-      const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/admin/reviews`, {
+      const response = await axios.get("/api/admin/reviews", {
         headers: { Authorization: `Bearer ${token}` },
       });
       setReviews(response.data.reviews || []);
@@ -31,7 +31,7 @@ const ReviewsManager = () => {
     try {
       const token = localStorage.getItem("token");
       await axios.patch(
-        `${import.meta.env.VITE_API_URL}/api/admin/reviews/${reviewId}/moderate`,
+        `/api/admin/reviews/${reviewId}/moderate`,
         { isApproved, isHidden },
         { headers: { Authorization: `Bearer ${token}` } },
       );
@@ -46,7 +46,7 @@ const ReviewsManager = () => {
 
     try {
       const token = localStorage.getItem("token");
-      await axios.delete(`${import.meta.env.VITE_API_URL}/api/admin/reviews/${reviewId}`, {
+      await axios.delete(`/api/admin/reviews/${reviewId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       fetchReviews();

@@ -1,15 +1,26 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { lazy, Suspense } from "react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 
 // Pages
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-import AdminDashboard from "./pages/admin/Dashboard";
-import ProviderDashboard from "./pages/provider/Dashboard";
-import CustomerDashboard from "./pages/customer/Dashboard";
 import SearchProviders from "./pages/customer/SearchProviders";
 import ProviderDetails from "./pages/customer/ProviderDetails";
+
+const AdminDashboard = lazy(() => import("./pages/admin/Dashboard"));
+const ProviderDashboard = lazy(() => import("./pages/provider/Dashboard"));
+const CustomerDashboard = lazy(() => import("./pages/customer/Dashboard"));
+
+const PageLoader = () => (
+  <div className="grid min-h-screen place-items-center bg-[#f5f4ed]">
+    <div className="text-center">
+      <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-[#173c2b]/20 border-t-[#173c2b]" />
+      <p className="mt-4 font-bold text-[#526057]">Loading your workspace…</p>
+    </div>
+  </div>
+);
 
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -50,9 +61,11 @@ function AppRoutes() {
       <Route
         path="/admin/*"
         element={
-          <ProtectedRoute allowedRoles={["admin"]}>
-            <AdminDashboard />
-          </ProtectedRoute>
+          <Suspense fallback={<PageLoader />}>
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <AdminDashboard />
+            </ProtectedRoute>
+          </Suspense>
         }
       />
 
@@ -60,9 +73,11 @@ function AppRoutes() {
       <Route
         path="/provider/*"
         element={
-          <ProtectedRoute allowedRoles={["provider"]}>
-            <ProviderDashboard />
-          </ProtectedRoute>
+          <Suspense fallback={<PageLoader />}>
+            <ProtectedRoute allowedRoles={["provider"]}>
+              <ProviderDashboard />
+            </ProtectedRoute>
+          </Suspense>
         }
       />
 
@@ -70,9 +85,11 @@ function AppRoutes() {
       <Route
         path="/customer/*"
         element={
-          <ProtectedRoute allowedRoles={["customer"]}>
-            <CustomerDashboard />
-          </ProtectedRoute>
+          <Suspense fallback={<PageLoader />}>
+            <ProtectedRoute allowedRoles={["customer"]}>
+              <CustomerDashboard />
+            </ProtectedRoute>
+          </Suspense>
         }
       />
     </Routes>

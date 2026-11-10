@@ -16,12 +16,9 @@ const ProviderVerification = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/admin/documents/pending`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
+      const response = await axios.get("/api/admin/documents/pending", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setPendingDocs(response.data.documents || []);
       setError("");
     } catch (err) {
@@ -34,10 +31,9 @@ const ProviderVerification = () => {
   const fetchProviderDocuments = async (providerId) => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/admin/providers/${providerId}/documents`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
+      const response = await axios.get(`/api/admin/providers/${providerId}/documents`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setProviderDocs(response.data.documents || []);
     } catch (err) {
       alert(err.response?.data?.message || "Failed to fetch provider documents");
@@ -48,7 +44,7 @@ const ProviderVerification = () => {
     try {
       const token = localStorage.getItem("token");
       await axios.patch(
-        `${import.meta.env.VITE_API_URL}/api/admin/documents/${documentId}/verify`,
+        `/api/admin/documents/${documentId}/verify`,
         { isVerified, rejectionReason },
         { headers: { Authorization: `Bearer ${token}` } },
       );
