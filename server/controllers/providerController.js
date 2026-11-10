@@ -1,4 +1,5 @@
-import { query } from '../config/database.js';
+import { query } from "../config/database.js";
+import { enqueue } from "../queues/queues.js";
 
 // Get Provider Profile
 export const getProviderProfile = async (req, res) => {
@@ -8,17 +9,17 @@ export const getProviderProfile = async (req, res) => {
        FROM providers p
        JOIN users u ON p.user_id = u.id
        WHERE p.user_id = $1`,
-      [req.user.id]
+      [req.user.id],
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ message: 'Provider profile not found' });
+      return res.status(404).json({ message: "Provider profile not found" });
     }
 
     res.json(result.rows[0]);
   } catch (error) {
-    console.error('Get provider profile error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Get provider profile error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -26,19 +27,39 @@ export const getProviderProfile = async (req, res) => {
 export const updateProviderProfile = async (req, res) => {
   try {
     const {
-      businessName, businessDescription, address, suburb, city, state,
-      postalCode, country, specialties
+      businessName,
+      businessDescription,
+      address,
+      suburb,
+      city,
+      state,
+      postalCode,
+      country,
+      specialties,
     } = req.body;
 
-    console.log('Update request - User ID:', req.user?.id);
-    console.log('Form data received:', { businessName, businessDescription, address, suburb, city, state, postalCode, country, specialties });
+    console.log("Update request - User ID:", req.user?.id);
+    console.log("Form data received:", {
+      businessName,
+      businessDescription,
+      address,
+      suburb,
+      city,
+      state,
+      postalCode,
+      country,
+      specialties,
+    });
 
     // Convert specialties string to array if it's a string
     let specialtiesArray = null;
     if (specialties) {
-      if (typeof specialties === 'string') {
+      if (typeof specialties === "string") {
         // Split by comma and trim whitespace, filter empty strings
-        specialtiesArray = specialties.split(',').map(s => s.trim()).filter(s => s.length > 0);
+        specialtiesArray = specialties
+          .split(",")
+          .map((s) => s.trim())
+          .filter((s) => s.length > 0);
       } else if (Array.isArray(specialties)) {
         specialtiesArray = specialties;
       }
@@ -58,22 +79,32 @@ export const updateProviderProfile = async (req, res) => {
         updated_at = CURRENT_TIMESTAMP
        WHERE user_id = $10
        RETURNING *`,
-      [businessName, businessDescription, address, suburb, city, state, 
-       postalCode, country, specialtiesArray, req.user.id]
+      [
+        businessName,
+        businessDescription,
+        address,
+        suburb,
+        city,
+        state,
+        postalCode,
+        country,
+        specialtiesArray,
+        req.user.id,
+      ],
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ message: 'Provider profile not found' });
+      return res.status(404).json({ message: "Provider profile not found" });
     }
 
-    res.json({ 
-      message: 'Profile updated successfully', 
-      provider: result.rows[0] 
+    res.json({
+      message: "Profile updated successfully",
+      provider: result.rows[0],
     });
   } catch (error) {
-    console.error('Update provider profile error:', error.message);
-    console.error('Full error:', error);
-    res.status(500).json({ message: error.message || 'Server error' });
+    console.error("Update provider profile error:", error.message);
+    console.error("Full error:", error);
+    res.status(500).json({ message: error.message || "Server error" });
   }
 };
 
@@ -86,45 +117,53 @@ export const getProviderServices = async (req, res) => {
        LEFT JOIN service_categories sc ON s.category_id = sc.id
        WHERE s.provider_id = (SELECT id FROM providers WHERE user_id = $1)
        ORDER BY s.created_at DESC`,
-      [req.user.id]
+      [req.user.id],
     );
 
     res.json(result.rows);
   } catch (error) {
-    console.error('Get provider services error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Get provider services error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
 // Create Service
 export const createService = async (req, res) => {
   try {
-    const { categoryId, name, description, price, duration, serviceAreas, images } = req.body;
+    const {
+      categoryId,
+      name,
+      description,
+      price,
+      duration,
+      serviceAreas,
+      images,
+    } = req.body;
 
     // Validate required fields
     if (!name || !categoryId || !price) {
-      return res.status(400).json({ 
-        message: 'Missing required fields',
-        error: 'name, categoryId, and price are required'
+      return res.status(400).json({
+        message: "Missing required fields",
+        error: "name, categoryId, and price are required",
       });
     }
 
     // Get provider ID
     const providerResult = await query(
-      'SELECT id FROM providers WHERE user_id = $1',
-      [req.user.id]
+      "SELECT id FROM providers WHERE user_id = $1",
+      [req.user.id],
     );
 
     if (providerResult.rows.length === 0) {
-      console.error('Provider not found for user_id:', req.user.id);
-      return res.status(404).json({ 
-        message: 'Provider profile not found',
-        error: 'You must create a provider profile first'
+      console.error("Provider not found for user_id:", req.user.id);
+      return res.status(404).json({
+        message: "Provider profile not found",
+        error: "You must create a provider profile first",
       });
     }
 
     const providerId = providerResult.rows[0].id;
-    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 
     // Ensure numeric fields
     const numPrice = parseFloat(price) || 0;
@@ -133,8 +172,11 @@ export const createService = async (req, res) => {
     // Convert serviceAreas from comma-separated string to JSON array
     let areasArray = [];
     if (serviceAreas) {
-      if (typeof serviceAreas === 'string') {
-        areasArray = serviceAreas.split(',').map(area => area.trim()).filter(area => area);
+      if (typeof serviceAreas === "string") {
+        areasArray = serviceAreas
+          .split(",")
+          .map((area) => area.trim())
+          .filter((area) => area);
       } else if (Array.isArray(serviceAreas)) {
         areasArray = serviceAreas;
       }
@@ -144,7 +186,16 @@ export const createService = async (req, res) => {
       `INSERT INTO services (provider_id, category_id, name, slug, description, price, duration, images)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING *`,
-      [providerId, categoryId, name, slug, description || '', numPrice, numDuration, images || null]
+      [
+        providerId,
+        categoryId,
+        name,
+        slug,
+        description || "",
+        numPrice,
+        numDuration,
+        images || null,
+      ],
     );
 
     // Handle service areas separately if provided
@@ -154,27 +205,37 @@ export const createService = async (req, res) => {
           await query(
             `INSERT INTO provider_service_areas (provider_id, suburb)
              VALUES ($1, $2)`,
-            [providerId, area]
+            [providerId, area],
           );
         } catch (areaError) {
           // Ignore duplicate area errors
-          if (!areaError.message.includes('duplicate')) {
-            console.error('Error adding service area:', areaError.message);
+          if (!areaError.message.includes("duplicate")) {
+            console.error("Error adding service area:", areaError.message);
           }
         }
       }
     }
 
-    console.log('Service created:', result.rows[0]);
-    res.status(201).json({ 
-      message: 'Service created successfully', 
-      service: result.rows[0] 
+    await enqueue("search.index-service", {
+      service: {
+        id: result.rows[0].id,
+        serviceName: result.rows[0].name,
+        description: result.rows[0].description,
+        price: result.rows[0].price,
+        providerId,
+      },
+    });
+
+    console.log("Service created:", result.rows[0]);
+    res.status(201).json({
+      message: "Service created successfully",
+      service: result.rows[0],
     });
   } catch (error) {
-    console.error('Create service error:', error);
-    res.status(500).json({ 
-      message: 'Server error',
-      error: error.message
+    console.error("Create service error:", error);
+    res.status(500).json({
+      message: "Server error",
+      error: error.message,
     });
   }
 };
@@ -183,16 +244,25 @@ export const createService = async (req, res) => {
 export const updateService = async (req, res) => {
   try {
     const { id } = req.params;
-    const { categoryId, name, description, price, duration, serviceAreas, images, isActive } = req.body;
+    const {
+      categoryId,
+      name,
+      description,
+      price,
+      duration,
+      serviceAreas,
+      images,
+      isActive,
+    } = req.body;
 
     // Verify ownership
     const providerResult = await query(
-      'SELECT id FROM providers WHERE user_id = $1',
-      [req.user.id]
+      "SELECT id FROM providers WHERE user_id = $1",
+      [req.user.id],
     );
 
     if (providerResult.rows.length === 0) {
-      return res.status(404).json({ message: 'Provider not found' });
+      return res.status(404).json({ message: "Provider not found" });
     }
 
     const providerId = providerResult.rows[0].id;
@@ -210,22 +280,37 @@ export const updateService = async (req, res) => {
         updated_at = CURRENT_TIMESTAMP
        WHERE id = $8 AND provider_id = $9
        RETURNING *`,
-      [categoryId, name, description, price, duration, images, isActive, id, providerId]
+      [
+        categoryId,
+        name,
+        description,
+        price,
+        duration,
+        images,
+        isActive,
+        id,
+        providerId,
+      ],
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ message: 'Service not found' });
+      return res.status(404).json({ message: "Service not found" });
     }
 
     // Handle service areas separately if provided
     if (serviceAreas) {
       // Clear existing service areas for this provider
-      await query('DELETE FROM provider_service_areas WHERE provider_id = $1', [providerId]);
-      
+      await query("DELETE FROM provider_service_areas WHERE provider_id = $1", [
+        providerId,
+      ]);
+
       // Add new service areas
       let areasArray = [];
-      if (typeof serviceAreas === 'string') {
-        areasArray = serviceAreas.split(',').map(area => area.trim()).filter(area => area);
+      if (typeof serviceAreas === "string") {
+        areasArray = serviceAreas
+          .split(",")
+          .map((area) => area.trim())
+          .filter((area) => area);
       } else if (Array.isArray(serviceAreas)) {
         areasArray = serviceAreas;
       }
@@ -234,15 +319,28 @@ export const updateService = async (req, res) => {
         await query(
           `INSERT INTO provider_service_areas (provider_id, suburb)
            VALUES ($1, $2)`,
-          [providerId, area]
+          [providerId, area],
         );
       }
     }
 
-    res.json({ message: 'Service updated successfully', service: result.rows[0] });
+    await enqueue("search.index-service", {
+      service: {
+        id: result.rows[0].id,
+        serviceName: result.rows[0].name,
+        description: result.rows[0].description,
+        price: result.rows[0].price,
+        providerId,
+      },
+    });
+
+    res.json({
+      message: "Service updated successfully",
+      service: result.rows[0],
+    });
   } catch (error) {
-    console.error('Update service error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Update service error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -252,23 +350,24 @@ export const deleteService = async (req, res) => {
     const { id } = req.params;
 
     const providerResult = await query(
-      'SELECT id FROM providers WHERE user_id = $1',
-      [req.user.id]
+      "SELECT id FROM providers WHERE user_id = $1",
+      [req.user.id],
     );
 
     const result = await query(
-      'DELETE FROM services WHERE id = $1 AND provider_id = $2 RETURNING id',
-      [id, providerResult.rows[0].id]
+      "DELETE FROM services WHERE id = $1 AND provider_id = $2 RETURNING id",
+      [id, providerResult.rows[0].id],
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ message: 'Service not found' });
+      return res.status(404).json({ message: "Service not found" });
     }
 
-    res.json({ message: 'Service deleted successfully' });
+    await enqueue("search.remove-service", { serviceId: id });
+    res.json({ message: "Service deleted successfully" });
   } catch (error) {
-    console.error('Delete service error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Delete service error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -277,11 +376,12 @@ export const getProviderBookings = async (req, res) => {
   try {
     const { status } = req.query;
 
-    let whereClause = 'WHERE b.provider_id = (SELECT id FROM providers WHERE user_id = $1)';
+    let whereClause =
+      "WHERE b.provider_id = (SELECT id FROM providers WHERE user_id = $1)";
     const params = [req.user.id];
 
     if (status) {
-      whereClause += ' AND b.status = $2';
+      whereClause += " AND b.status = $2";
       params.push(status);
     }
 
@@ -291,13 +391,13 @@ export const getProviderBookings = async (req, res) => {
        LEFT JOIN services s ON b.service_id = s.id
        ${whereClause}
        ORDER BY b.booking_date DESC, b.created_at DESC`,
-      params
+      params,
     );
 
     res.json(result.rows);
   } catch (error) {
-    console.error('Get provider bookings error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Get provider bookings error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -307,19 +407,29 @@ export const updateBookingStatus = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    const validStatuses = ['pending', 'confirmed', 'in_progress', 'completed', 'cancelled', 'rejected'];
+    const validStatuses = [
+      "pending",
+      "confirmed",
+      "in_progress",
+      "completed",
+      "cancelled",
+      "rejected",
+    ];
     if (!validStatuses.includes(status)) {
-      return res.status(400).json({ message: 'Invalid status. Valid statuses are: ' + validStatuses.join(', ') });
+      return res.status(400).json({
+        message:
+          "Invalid status. Valid statuses are: " + validStatuses.join(", "),
+      });
     }
 
     // Get booking first to get customer_id
     const bookingResult = await query(
       `SELECT customer_id FROM bookings WHERE id = $1 AND provider_id = (SELECT id FROM providers WHERE user_id = $2)`,
-      [id, req.user.id]
+      [id, req.user.id],
     );
 
     if (bookingResult.rows.length === 0) {
-      return res.status(404).json({ message: 'Booking not found' });
+      return res.status(404).json({ message: "Booking not found" });
     }
 
     const customerId = bookingResult.rows[0].customer_id;
@@ -329,7 +439,7 @@ export const updateBookingStatus = async (req, res) => {
       `UPDATE bookings SET status = $1, completed_at = CASE WHEN $1::varchar = 'completed' THEN CURRENT_TIMESTAMP ELSE completed_at END, updated_at = CURRENT_TIMESTAMP
        WHERE id = $2
        RETURNING *`,
-      [status, id]
+      [status, id],
     );
 
     // Create notification for customer
@@ -339,20 +449,23 @@ export const updateBookingStatus = async (req, res) => {
          VALUES ($1, $2, $3, $4)`,
         [
           customerId,
-          'booking_status',
-          'Booking Status Updated',
-          `Your booking status has been updated to: ${status}`
-        ]
+          "booking_status",
+          "Booking Status Updated",
+          `Your booking status has been updated to: ${status}`,
+        ],
       );
     } catch (notifError) {
-      console.error('Error creating notification:', notifError);
+      console.error("Error creating notification:", notifError);
       // Don't fail the whole operation if notification fails
     }
 
-    res.json({ message: 'Booking status updated successfully', booking: result.rows[0] });
+    res.json({
+      message: "Booking status updated successfully",
+      booking: result.rows[0],
+    });
   } catch (error) {
-    console.error('Update booking status error:', error);
-    res.status(500).json({ message: 'Server error: ' + error.message });
+    console.error("Update booking status error:", error);
+    res.status(500).json({ message: "Server error: " + error.message });
   }
 };
 
@@ -366,13 +479,13 @@ export const getProviderReviews = async (req, res) => {
        LEFT JOIN bookings b ON r.booking_id = b.id
        WHERE r.provider_id = (SELECT id FROM providers WHERE user_id = $1)
        ORDER BY r.created_at DESC`,
-      [req.user.id]
+      [req.user.id],
     );
 
     res.json(result.rows);
   } catch (error) {
-    console.error('Get provider reviews error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Get provider reviews error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -388,16 +501,19 @@ export const respondToReview = async (req, res) => {
         provider_responded_at = CURRENT_TIMESTAMP
        WHERE id = $2 AND provider_id = (SELECT id FROM providers WHERE user_id = $3)
        RETURNING *`,
-      [response, id, req.user.id]
+      [response, id, req.user.id],
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ message: 'Review not found' });
+      return res.status(404).json({ message: "Review not found" });
     }
 
-    res.json({ message: 'Response added successfully', review: result.rows[0] });
+    res.json({
+      message: "Response added successfully",
+      review: result.rows[0],
+    });
   } catch (error) {
-    console.error('Respond to review error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Respond to review error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };

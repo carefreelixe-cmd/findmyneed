@@ -1,4 +1,4 @@
-import { query } from "../config/database.js";
+import { query, withTransaction } from "../config/database.js";
 
 // Search Providers
 export const searchProviders = async (req, res) => {
@@ -154,57 +154,90 @@ export const createBooking = async (req, res) => {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
-    const result = await query(
-      `INSERT INTO bookings (
-        customer_id, provider_id, service_id, booking_date, booking_time,
-        customer_name, customer_email, customer_phone,
-        address, suburb, notes, total_price, status, requirements
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-      RETURNING *`,
-      [
-        req.user.id,
-        providerId,
-        serviceId,
-        bookingDate,
-        bookingTime,
-        customerName,
-        customerEmail,
-        customerPhone,
-        address,
-        suburb,
-        notes,
-        totalPrice,
-        "pending",
-        requirements,
-      ],
-    );
+    const booking = await withTransaction(async (client) => {
+      const serviceResult = await client.query(
+        `SELECT s.id, s.provider_id, s.price
+         FROM services s
+         JOIN providers p ON p.id = s.provider_id
+         JOIN users u ON u.id = p.user_id
+         WHERE s.id = $1 AND s.provider_id = $2 AND s.is_active = true
+           AND s.deleted_at IS NULL AND p.deleted_at IS NULL
+           AND u.is_active = true AND u.is_approved = true
+         FOR SHARE`,
+        [serviceId, providerId],
+      );
 
-    // Create notification for provider
-    const providerResult = await query(
-      "SELECT user_id FROM providers WHERE id = $1",
-      [providerId],
-    );
+      if (serviceResult.rowCount === 0) {
+        const error = new Error("The selected service is unavailable");
+        error.statusCode = 409;
+        throw error;
+      }
 
-    if (providerResult.rows.length > 0) {
-      await query(
+      const providerResult = await client.query(
+        "SELECT user_id FROM providers WHERE id = $1 FOR SHARE",
+        [providerId],
+      );
+      const safePrice = serviceResult.rows[0].price ?? totalPrice ?? 0;
+      const bookingResult = await client.query(
+        `INSERT INTO bookings (
+          customer_id, provider_id, service_id, booking_date, booking_time,
+          customer_name, customer_email, customer_phone, address, suburb,
+          notes, total_price, status, requirements
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        RETURNING *`,
+        [
+          req.user.id,
+          providerId,
+          serviceId,
+          bookingDate,
+          bookingTime,
+          customerName,
+          customerEmail,
+          customerPhone,
+          address,
+          suburb,
+          notes,
+          safePrice,
+          "pending",
+          requirements,
+        ],
+      );
+
+      const notificationResult = await client.query(
         `INSERT INTO notifications (user_id, type, subject, message)
-         VALUES ($1, $2, $3, $4)`,
+         VALUES ($1, 'in_app', 'New Booking Request', $2)
+         RETURNING id`,
         [
           providerResult.rows[0].user_id,
-          "in_app",
-          "New Booking Request",
           `New booking request from ${customerName}`,
         ],
       );
-    }
+
+      await client.query(
+        `INSERT INTO outbox_events (topic, aggregate_type, aggregate_id, payload)
+         VALUES ('notification.send', 'booking', $1, $2)`,
+        [
+          bookingResult.rows[0].id,
+          {
+            notificationId: notificationResult.rows[0].id,
+            bookingId: bookingResult.rows[0].id,
+          },
+        ],
+      );
+
+      return bookingResult.rows[0];
+    });
 
     res.status(201).json({
       message: "Booking created successfully",
-      booking: result.rows[0],
+      booking,
     });
   } catch (error) {
     console.error("Create booking error:", error);
-    res.status(500).json({ message: "Server error", error: error.message });
+    res.status(error.statusCode || 500).json({
+      message: error.statusCode ? error.message : "Server error",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
   }
 };
 

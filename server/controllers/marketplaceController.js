@@ -1,4 +1,5 @@
 import { query } from "../config/database.js";
+import { searchServiceIds } from "../services/searchService.js";
 
 const numberOr = (value, fallback) => {
   const parsed = Number(value);
@@ -73,11 +74,17 @@ export const searchMarketplace = async (req, res) => {
       filters.push(template.replaceAll("?", `$${values.length}`));
     };
 
-    if (req.query.q)
-      add(
-        "(p.business_name ILIKE ? OR s.name ILIKE ? OR s.description ILIKE ?)",
-        `%${req.query.q}%`,
-      );
+    if (req.query.q) {
+      const indexedIds = await searchServiceIds(req.query.q);
+      if (indexedIds) {
+        add("s.id = ANY(?::uuid[])", indexedIds);
+      } else {
+        add(
+          "(p.business_name ILIKE ? OR s.name ILIKE ? OR s.description ILIKE ?)",
+          `%${req.query.q}%`,
+        );
+      }
+    }
     if (req.query.category)
       add("(sc.id::text = ? OR sc.slug = ?)", req.query.category);
     if (req.query.city) add("p.city ILIKE ?", req.query.city);
