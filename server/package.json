@@ -16,7 +16,8 @@
     "init-db": "node initDb.js",
     "migrate-marketplace": "node migrateMarketplace.js",
     "migrate-scalability": "node migrateScalability.js",
-    "update-admin-pwd": "node updateAdminPassword.js"
+    "update-admin-pwd": "node updateAdminPassword.js",
+    "setup-demo-accounts": "node setupDemoAccounts.js"
   },
   "dependencies": {
     "@elastic/elasticsearch": "^9.5.1",

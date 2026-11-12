@@ -14,16 +14,12 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(() => JSON.parse(localStorage.getItem("demo_user") || "null"));
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState(localStorage.getItem("token"));
 
   useEffect(() => {
     if (token) {
-      if (token === "frontend-demo-token") {
-        setLoading(false);
-        return;
-      }
       axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
       fetchUser();
     } else {
@@ -66,32 +62,15 @@ export const AuthProvider = ({ children }) => {
     return user;
   };
 
-  const demoLogin = (role) => {
-    const demoUser = {
-      id: `demo-${role}`,
-      role,
-      firstName: role === "admin" ? "Platform" : role === "provider" ? "UrbanFix" : "Aarav",
-      lastName: role === "admin" ? "Admin" : role === "provider" ? "Services" : "Customer",
-      email: `${role}@demo.com`,
-    };
-    localStorage.setItem("token", "frontend-demo-token");
-    localStorage.setItem("demo_user", JSON.stringify(demoUser));
-    setToken("frontend-demo-token");
-    setUser(demoUser);
-    setLoading(false);
-    return demoUser;
-  };
-
   const logout = () => {
     localStorage.removeItem("token");
-    localStorage.removeItem("demo_user");
     setToken(null);
     setUser(null);
     delete axios.defaults.headers.common["Authorization"];
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, demoLogin, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, register, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );

@@ -9,7 +9,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const { login, demoLogin } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -27,9 +27,24 @@ export default function Login() {
     }
   };
 
-  const openDemo = (role) => {
-    demoLogin(role);
-    navigate(`/${role}`);
+  const demoAccounts = {
+    customer: { email: "test@gmail.com", password: "demo123" },
+    provider: { email: "provider@gmail.com", password: "demo123" },
+    admin: { email: "admin@marketplace.com", password: "admin123" },
+  };
+
+  const openDemo = async (role) => {
+    setError("");
+    setLoading(true);
+    try {
+      const account = demoAccounts[role];
+      const user = await login(account.email, account.password);
+      navigate(`/${user.role}`);
+    } catch (err) {
+      setError(err.response?.data?.message || `Unable to open the ${role} demo`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -181,6 +196,7 @@ export default function Login() {
                   key={role}
                   type="button"
                   onClick={() => openDemo(role)}
+                  disabled={loading}
                   className="rounded-xl border border-gray-200 bg-gray-50 px-2 py-3 text-xs font-bold capitalize text-brand-charcoal hover:border-success-green"
                 >
                   {role}

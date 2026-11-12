@@ -1,12 +1,13 @@
 import { query } from './config/database.js';
+import bcrypt from 'bcryptjs';
 
 const updateAdminPassword = async () => {
   try {
-    const hashedPassword = '$2b$10$9932Kf4RALeRZsYv/fAs1OZwquJjLLh7BLcQo9ZOT620TvcNC5zqS';
+    const hashedPassword = await bcrypt.hash('admin123', 10);
     const email = 'admin@marketplace.com';
 
     const result = await query(
-      'UPDATE users SET password = $1, updated_at = CURRENT_TIMESTAMP WHERE email = $2 RETURNING id, email, role',
+      'UPDATE users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE email = $2 RETURNING id, email, role',
       [hashedPassword, email]
     );
 
